@@ -31,12 +31,60 @@ const TECH_CADET_LABELS = [
   { label: "Developer Network Cadet", match: "Developer Network" },
 ];
 
-function officerRoleLabels(dept: string): Array<{ label: string; match: string }> {
-  return [
-    { label: `Chief ${dept} Officer`, match: `Chief ${dept} Officer` },
-    { label: `Vice Chief ${dept} Officer`, match: `Vice Chief ${dept} Officer` },
-  ];
-}
+const OPERATIONS_LABELS = [
+  { label: "Program Manager", match: "Program Manager" },
+  { label: "Host", match: "Host" },
+  { label: "Technical Coordinator", match: "Technical Coordinator" },
+  { label: "Logistics & Resource Coordinator", match: "Logistics and Resource Coordinator" },
+  { label: "Registration & Access Coordinator", match: "Registration and Access Coordinator" },
+  { label: "Media Documentation Officer", match: "Media Documentation Officer" },
+];
+
+const CREATIVES_LABELS = [
+  { label: "Video Editor", match: "Video Editor" },
+  { label: "Animator", match: "Animator" },
+  { label: "Photographer/Videographer", match: "Photographer/Videographer" },
+  { label: "Graphic Designer", match: "Graphic Designer" },
+  { label: "Illustrator", match: "Illustrator" },
+];
+
+const MARKETING_LABELS = [
+  { label: "Chief Marketing Officer", match: "Chief Marketing Officer" },
+  { label: "Vice Chief Marketing Officer", match: "Vice Chief Marketing Officer" },
+  { label: "Caption Writer & Engagement Analyst", match: "Caption Writer and Engagement Analyst" },
+  { label: "Content Strategist & Video Director", match: "Content Strategist and Video Director" },
+];
+
+const RELATIONS_LABELS = [
+  { label: "Community Partnership Lead", match: "Community Partnership Lead" },
+  { label: "Community Partnership Co-Lead", match: "Community Partnership Co-Lead" },
+  { label: "Sponsors Lead", match: "Sponsors Lead" },
+  { label: "Sponsors Co-Lead", match: "Sponsors Co-Lead" },
+  { label: "Engagement Lead", match: "Engagement Lead" },
+  { label: "Engagement Co-Lead", match: "Engagement Co-Lead" },
+  { label: "Membership Lead", match: "Membership Lead" },
+  { label: "Membership Co-Lead", match: "Membership Co-Lead" },
+  { label: "Community Member", match: "Community Member" },
+];
+
+const ADMINISTRATIVE_LABELS = [
+  { label: "Secretariat Officer", match: "Secretariat Officer" },
+  { label: "Membership Officer", match: "Membership Officer" },
+  { label: "Institutional Affairs Officer", match: "Institutional Affairs Officer" },
+  { label: "Internal Operations Officer", match: "Internal Operations Officer" },
+  { label: "Administrative Systems Officer", match: "Administrative Systems Officer" },
+  { label: "Events & Records Officer", match: "Events & Records Officer" },
+];
+
+const EXECUTIVE_LABELS = [
+  { label: "Vice Chief Executive Officer", match: "Vice Chief Executive Officer" },
+];
+
+const FINANCE_LABELS = [
+  { label: "Chief Finance Officer", match: "Chief Finance Officer" },
+  { label: "Vice Chief Finance Officer", match: "Vice Chief Finance Officer" },
+  { label: "Auditor", match: "Auditor" },
+];
 
 type RegistrationRow = {
   created_at: string | null;
@@ -442,48 +490,43 @@ export default async function DashboardPage() {
       title: "Operations",
       rows: operationsRows,
       key: "application_role",
-      labels: officerRoleLabels("Operations"),
+      labels: OPERATIONS_LABELS,
     },
     {
       title: "Creatives",
       rows: creativesRows,
       key: "application_role",
-      labels: officerRoleLabels("Creatives"),
+      labels: CREATIVES_LABELS,
     },
     {
       title: "Marketing",
       rows: marketingRows,
       key: "application_role",
-      labels: officerRoleLabels("Marketing"),
+      labels: MARKETING_LABELS,
     },
     {
       title: "Relations",
       rows: relationsRows,
       key: "application_role",
-      labels: officerRoleLabels("Relations"),
+      labels: RELATIONS_LABELS,
     },
     {
       title: "Administrative",
       rows: administrativeRows,
       key: "application_role",
-      labels: officerRoleLabels("Administrative"),
+      labels: ADMINISTRATIVE_LABELS,
     },
     {
       title: "Executive",
       rows: executiveRows,
       key: "application_role",
-      labels: [
-        {
-          label: "Vice Chief Executive Officer",
-          match: "Vice Chief Executive Officer",
-        },
-      ],
+      labels: EXECUTIVE_LABELS,
     },
     {
       title: "Finance",
       rows: financeRows,
       key: "application_role",
-      labels: officerRoleLabels("Finance"),
+      labels: FINANCE_LABELS,
     },
   ].map((group) => {
     const items = group.labels.map(({ label, match }) => ({
