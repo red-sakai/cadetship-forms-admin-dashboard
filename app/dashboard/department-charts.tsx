@@ -8,9 +8,9 @@ export type DepartmentSlice = {
 };
 
 const COLORS = [
-  "#2563eb",
-  "#0ea5e9",
-  "#8b5cf6",
+  "#7c3aed",
+  "#3b82f6",
+  "#a855f7",
   "#f59e0b",
   "#10b981",
   "#14b8a6",

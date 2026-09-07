@@ -64,7 +64,7 @@ export default function Home() {
       <section className="login-card" aria-label="Admin login">
         <div className="login-brand anim">
           <Image
-            src="/cncp-logo.jpg"
+            src="/cncp-fb-logo.jpg"
             alt="CNCP logo"
             className="login-logo"
             width={48}

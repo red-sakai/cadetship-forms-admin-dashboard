@@ -525,7 +525,7 @@ export default async function DashboardPage() {
         <div className="app-header-inner">
           <div className="app-brand">
             <Image
-              src="/cncp-logo.jpg"
+              src="/cncp-fb-logo.jpg"
               alt="CNCP logo"
               className="app-logo"
               width={34}
