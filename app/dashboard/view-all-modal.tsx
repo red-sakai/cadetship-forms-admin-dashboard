@@ -248,6 +248,14 @@ const OFFICER_QUESTIONS: Record<string, string[]> = {
     "How would you approach crafting custom visual elements such as mascots or unique illustrations for CNCP?",
     "Describe a time you created an illustration or custom visual element. What was your creative process and what did you learn?",
   ],
+  "Chief Marketing Officer": [
+    "What does leading a marketing team look like to you, and how would you set the direction for CNCP's brand?",
+    "Tell us about a time you led or took charge of a project or activity from start to finish.",
+  ],
+  "Vice Chief Marketing Officer": [
+    "How would you help the Chief Marketing Officer plan and pace the team's content and campaigns?",
+    "If two team members had different ideas for a campaign, how would you help them move forward?",
+  ],
   "Caption Writer and Engagement Analyst": [
     "How would you approach creating captions that reflect CNCP's brand voice while encouraging engagement from followers?",
     "What strategies would you use to analyze engagement metrics and use them to improve future content?",
@@ -387,12 +395,15 @@ function renderOfficerAnswers(
   if (!value || Object.keys(value).length === 0) return <span>-</span>;
   const questions = role ? OFFICER_QUESTIONS[role] : undefined;
   if (!questions) {
+    const keys = Object.keys(value).sort();
     return (
       <div className="view-all-answers">
-        <div className="view-all-answer">
-          <strong>Answers</strong>
-          <div>{formatJsonCell(value)}</div>
-        </div>
+        {keys.map((key) => (
+          <div key={key} className="view-all-answer">
+            <strong>{key}</strong>
+            <div>{formatAnswerValue(value[key])}</div>
+          </div>
+        ))}
       </div>
     );
   }

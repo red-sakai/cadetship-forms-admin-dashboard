@@ -325,62 +325,6 @@ function renderTechAnswers(
 }
 
 const OFFICER_QUESTIONS: Record<string, string[]> = {
-  "Chief Operations Officer": [
-    "How would you approach planning and coordinating a CNCP event from start to finish?",
-    "Describe a time you managed timelines or coordinated multiple tasks for a project. How did you ensure everything stayed on track?",
-  ],
-  "Vice Chief Operations Officer": [
-    "How would you engage with attendees and manage the flow of an event you're hosting?",
-    "Describe a time you presented or facilitated a discussion. How did you keep the audience engaged?",
-  ],
-  "Chief Creatives Officer": [
-    "How would you approach the post-production process to create engaging video content for CNCP?",
-    "Describe a time you edited a video or worked with footage. What tools did you use and what did you learn from the experience?",
-  ],
-  "Vice Chief Creatives Officer": [
-    "How would you develop animated elements that complement video content or stand alone as engaging digital assets?",
-    "Describe a time you created an animation or motion-based visual. What was your process and what did you learn?",
-  ],
-  "Chief Marketing Officer": [
-    "What does leading a marketing team look like to you, and how would you set the direction for CNCP's brand?",
-    "Tell us about a time you led or took charge of a project or activity from start to finish.",
-  ],
-  "Vice Chief Marketing Officer": [
-    "How would you help the Chief Marketing Officer plan and pace the team's content and campaigns?",
-    "If two team members had different ideas for a campaign, how would you help them move forward?",
-  ],
-  "Chief Relations Officer": [
-    "How would you identify and establish partnerships with other student organizations and academic communities to strengthen CNCP's presence?",
-    "Describe a time you built or maintained a professional relationship with an external group. How did you approach it and what was the outcome?",
-  ],
-  "Vice Chief Relations Officer": [
-    "How would you support the Community Partnership Lead in managing external relationships and coordinating partnership activities?",
-    "How would you handle a situation where a potential partner organization is unresponsive to outreach?",
-  ],
-  "Chief Administrative Officer": [
-    "How would you manage official documentation and ensure that organizational records are accurate and accessible?",
-    "Describe a time you managed documents, schedules, or records. How did you stay organized and ensure nothing was missed?",
-  ],
-  "Vice Chief Administrative Officer": [
-    "How would you manage membership records and ensure that member information is complete and up to date?",
-    "Describe a time you handled member-related administration or processed applications. How did you ensure accuracy and efficiency?",
-  ],
-  "Vice Chief Executive Officer": [
-    "What does being part of the organization's executive team mean to you, and how would you contribute as Vice Chief Executive Officer?",
-    "Describe a time you supported or stepped in for a leader. What did you do, and what did you learn from it?",
-  ],
-  "Chief Finance Officer": [
-    "How would you lead the Finance Department in managing CNCP's financial resources responsibly and transparently?",
-    "Describe a time you managed a budget, allocated resources, or handled financial planning. What did you learn from the experience?",
-  ],
-  "Vice Chief Finance Officer": [
-    "How would you support the Chief Finance Officer in managing day-to-day financial operations and departmental coordination?",
-    "How would you handle a situation where financial documentation needs to be completed under a tight deadline?",
-  ],
-  Auditor: [
-    "How would you approach independently reviewing financial records to ensure accuracy and compliance with policies?",
-    "Describe a time you identified an error or discrepancy in a process. How did you handle it and what was the outcome?",
-  ],
   "Program Manager": [
     "How would you approach planning and coordinating a CNCP event from start to finish?",
     "Describe a time you managed timelines or coordinated multiple tasks for a project. How did you ensure everything stayed on track?",
@@ -411,7 +355,7 @@ const OFFICER_QUESTIONS: Record<string, string[]> = {
   ],
   Animator: [
     "How would you develop animated elements that complement video content or stand alone as engaging digital assets?",
-    "Describe a time you created an animation or motion-based visual. What was your process and what did you learn?",
+    "Describe a time you created an animation or motion-based visual. What was your creative process and what did you learn?",
   ],
   "Photographer/Videographer": [
     "How would you approach capturing high-quality images and videos during a CNCP event or campaign?",
@@ -425,29 +369,21 @@ const OFFICER_QUESTIONS: Record<string, string[]> = {
     "How would you approach crafting custom visual elements such as mascots or unique illustrations for CNCP?",
     "Describe a time you created an illustration or custom visual element. What was your creative process and what did you learn?",
   ],
-  "Secretariat Officer": [
-    "How would you manage official documentation and ensure that organizational records are accurate and accessible?",
-    "Describe a time you managed documents, schedules, or records. How did you stay organized and ensure nothing was missed?",
+  "Chief Marketing Officer": [
+    "What does leading a marketing team look like to you, and how would you set the direction for CNCP's brand?",
+    "Tell us about a time you led or took charge of a project or activity from start to finish.",
   ],
-  "Membership Officer": [
-    "How would you manage membership records and ensure that member information is complete and up to date?",
-    "Describe a time you handled member-related administration or processed applications. How did you ensure accuracy and efficiency?",
+  "Vice Chief Marketing Officer": [
+    "How would you help the Chief Marketing Officer plan and pace the team's content and campaigns?",
+    "If two team members had different ideas for a campaign, how would you help them move forward?",
   ],
-  "Institutional Affairs Officer": [
-    "How would you coordinate with the school regarding organizational requirements such as the GPOA?",
-    "Describe a time you followed up on pending submissions or coordinated with institutional offices. How did you ensure timely completion?",
+  "Caption Writer and Engagement Analyst": [
+    "How would you approach creating captions that reflect CNCP's brand voice while encouraging engagement from followers?",
+    "What strategies would you use to analyze engagement metrics and use them to improve future content?",
   ],
-  "Internal Operations Officer": [
-    "How would you monitor administrative tasks and ensure that deadlines are met across departments?",
-    "Describe a time you identified delayed or incomplete tasks and escalated them appropriately. How did you handle it?",
-  ],
-  "Administrative Systems Officer": [
-    "How would you manage the administrative use of CNCP's systems and ensure they support operational needs?",
-    "Describe a time you identified gaps or inefficiencies in a system or workflow. How did you address them?",
-  ],
-  "Events & Records Officer": [
-    "How would you coordinate the administrative requirements for a CNCP event with the Operations Department?",
-    "Describe a time you tracked event statistics or participation data. How did you ensure accuracy and completeness?",
+  "Content Strategist and Video Director": [
+    "How would you approach brainstorming and developing ideas for a new CNCP campaign or post?",
+    "How would you ensure that messaging such as titles, taglines, and key concepts are attention-grabbing and on-brand?",
   ],
   "Community Partnership Lead": [
     "How would you identify and establish partnerships with other student organizations and academic communities to strengthen CNCP's presence?",
@@ -485,13 +421,45 @@ const OFFICER_QUESTIONS: Record<string, string[]> = {
     "How would you contribute to community initiatives and help strengthen participation within CNCP?",
     "What ideas do you have for activities or events that could improve member engagement in the organization?",
   ],
-  "Caption Writer and Engagement Analyst": [
-    "How would you approach creating captions that reflect CNCP's brand voice while encouraging engagement from followers?",
-    "What strategies would you use to analyze engagement metrics and use them to improve future content?",
+  "Secretariat Officer": [
+    "How would you manage official documentation and ensure that organizational records are accurate and accessible?",
+    "Describe a time you managed documents, schedules, or records. How did you stay organized and ensure nothing was missed?",
   ],
-  "Content Strategist and Video Director": [
-    "How would you approach brainstorming and developing ideas for a new CNCP campaign or post?",
-    "How would you ensure that messaging such as titles, taglines, and key concepts are attention-grabbing and on-brand?",
+  "Membership Officer": [
+    "How would you manage membership records and ensure that member information is complete and up to date?",
+    "Describe a time you handled member-related administration or processed applications. How did you ensure accuracy and efficiency?",
+  ],
+  "Institutional Affairs Officer": [
+    "How would you coordinate with the school regarding organizational requirements such as the GPOA?",
+    "Describe a time you followed up on pending submissions or coordinated with institutional offices. How did you ensure timely completion?",
+  ],
+  "Internal Operations Officer": [
+    "How would you monitor administrative tasks and ensure that deadlines are met across departments?",
+    "Describe a time you identified delayed or incomplete tasks and escalated them appropriately. How did you handle it?",
+  ],
+  "Administrative Systems Officer": [
+    "How would you manage the administrative use of CNCP's systems and ensure they support operational needs?",
+    "Describe a time you identified gaps or inefficiencies in a system or workflow. How did you address them?",
+  ],
+  "Events & Records Officer": [
+    "How would you coordinate the administrative requirements for a CNCP event with the Operations Department?",
+    "Describe a time you tracked event statistics or participation data. How did you ensure accuracy and completeness?",
+  ],
+  "Vice Chief Executive Officer": [
+    "What does being part of the organization's executive team mean to you, and how would you contribute as Vice Chief Executive Officer?",
+    "Describe a time you supported or stepped in for a leader. What did you do, and what did you learn from it?",
+  ],
+  "Chief Finance Officer": [
+    "How would you lead the Finance Department in managing CNCP's financial resources responsibly and transparently?",
+    "Describe a time you managed a budget, allocated resources, or handled financial planning. What did you learn from the experience?",
+  ],
+  "Vice Chief Finance Officer": [
+    "How would you support the Chief Finance Officer in managing day-to-day financial operations and departmental coordination?",
+    "How would you handle a situation where financial documentation needs to be completed under a tight deadline?",
+  ],
+  Auditor: [
+    "How would you approach independently reviewing financial records to ensure accuracy and compliance with policies?",
+    "Describe a time you identified an error or discrepancy in a process. How did you handle it and what was the outcome?",
   ],
 };
 
@@ -505,55 +473,15 @@ function renderOfficerAnswers(
 
   const questions = role ? OFFICER_QUESTIONS[role] : undefined;
   if (!questions) {
+    const keys = Object.keys(value).sort();
     return (
       <div className="dashboard-answers">
-        <div className="dashboard-answer">
-          <strong>Answers</strong>
-          <div>{formatJsonCell(value)}</div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="dashboard-answers">
-      {questions.map((question, index) => (
-        <div key={`${role}-${index}`} className="dashboard-answer">
-          <strong>
-            {index + 1}. {question}
-          </strong>
-          <div>
-            {formatAnswerValue(value[`question_${index + 1}`])}
+        {keys.map((key) => (
+          <div key={key} className="dashboard-answer">
+            <strong>{key}</strong>
+            <div>{formatAnswerValue(value[key])}</div>
           </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function renderCreativesCell(
-  value: Record<string, unknown> | null,
-  role: string | null,
-): ReactElement {
-  return renderCreativesAnswers(value, role);
-}
-
-function renderCreativesAnswers(
-  value: Record<string, unknown> | null,
-  role: string | null,
-): ReactElement {
-  if (!value || Object.keys(value).length === 0) {
-    return <span>-</span>;
-  }
-
-  const questions = role ? OFFICER_QUESTIONS[role] : undefined;
-  if (!questions) {
-    return (
-      <div className="dashboard-answers">
-        <div className="dashboard-answer">
-          <strong>Answers</strong>
-          <div>{formatJsonCell(value)}</div>
-        </div>
+        ))}
       </div>
     );
   }
@@ -1442,7 +1370,7 @@ export default function TableTabs({
                       <td>{row.team ?? "-"}</td>
                       <td>{row.application_role ?? "-"}</td>
                       <td>
-                        {renderCreativesCell(
+                        {renderOfficerAnswers(
                           row.question_answers,
                           row.application_role,
                         )}
