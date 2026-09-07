@@ -1,0 +1,11 @@
+Questions for Enterprise Networking Lead and Co-lead:
+1. What experience do you have with networking concepts (e.g., OSI/TCP-IP, configuration, or troubleshooting), and how would you help members learn them?
+2. How would you design a hands-on laboratory or activity that helps members understand how a real enterprise network works?
+
+Questions for CyberOps Lead and Co-lead:
+1. What experience do you have with cybersecurity (e.g., CTFs, threat monitoring, or security tools), and how would you guide members in learning them?
+2. How would you prepare the team for a security challenge or incident-response exercise?
+
+Questions for DevNet Lead and Co-lead:
+1. What experience do you have with programming, APIs, or automation, and how would you help members build those skills?
+2. What kind of automation tool or project would you want the team to build, and how would you guide it?
