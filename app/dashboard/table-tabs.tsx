@@ -470,6 +470,24 @@ function getAnswer(value: Record<string, unknown>, index: number): unknown {
   return value[key] ?? value[altKey] ?? value[altKey2] ?? null;
 }
 
+function lookupQuestions(role: string | null): string[] | undefined {
+  if (!role) return undefined;
+  if (OFFICER_QUESTIONS[role]) return OFFICER_QUESTIONS[role];
+  if (role.endsWith("s") && OFFICER_QUESTIONS[role.slice(0, -1)]) {
+    return OFFICER_QUESTIONS[role.slice(0, -1)];
+  }
+  for (const key of Object.keys(OFFICER_QUESTIONS)) {
+    if (key.toLowerCase() === role.toLowerCase()) return OFFICER_QUESTIONS[key];
+    if (key.endsWith("s") && key.slice(0, -1).toLowerCase() === role.toLowerCase()) {
+      return OFFICER_QUESTIONS[key];
+    }
+    if (role.endsWith("s") && key.toLowerCase() === role.slice(0, -1).toLowerCase()) {
+      return OFFICER_QUESTIONS[key];
+    }
+  }
+  return undefined;
+}
+
 function renderOfficerAnswers(
   value: Record<string, unknown> | null,
   role: string | null,
@@ -478,14 +496,32 @@ function renderOfficerAnswers(
     return <span>-</span>;
   }
 
-  const questions = role ? OFFICER_QUESTIONS[role] : undefined;
-  if (!questions) {
-    const keys = Object.keys(value).sort();
+  const questions = lookupQuestions(role);
+  const keys = Object.keys(value).sort();
+
+  if (questions) {
     return (
       <div className="dashboard-answers">
-        {keys.map((k) => (
+        {questions.map((question, index) => (
+          <div key={`${role}-${index}`} className="dashboard-answer">
+            <strong>
+              {index + 1}. {question}
+            </strong>
+            <div>
+              {formatAnswerValue(getAnswer(value, index))}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (keys.length > 0) {
+    return (
+      <div className="dashboard-answers">
+        {keys.map((k, i) => (
           <div key={k} className="dashboard-answer">
-            <strong>{k}</strong>
+            <strong>Question {i + 1}</strong>
             <div>{formatAnswerValue(value[k])}</div>
           </div>
         ))}
@@ -493,20 +529,7 @@ function renderOfficerAnswers(
     );
   }
 
-  return (
-    <div className="dashboard-answers">
-      {questions.map((question, index) => (
-        <div key={`${role}-${index}`} className="dashboard-answer">
-          <strong>
-            {index + 1}. {question}
-          </strong>
-          <div>
-            {formatAnswerValue(getAnswer(value, index))}
-          </div>
-        </div>
-      ))}
-    </div>
-  );
+  return <span>-</span>;
 }
 
 function toFileSlug(value: string): string {
