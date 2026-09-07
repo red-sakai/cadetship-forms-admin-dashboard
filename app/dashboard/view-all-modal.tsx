@@ -388,6 +388,13 @@ function renderTechAnswers(
   );
 }
 
+function getAnswer(value: Record<string, unknown>, index: number): unknown {
+  const key = `question_${index + 1}`;
+  const altKey = `leadershipQuestion${index + 1}`;
+  const altKey2 = `leadershipQuestion_${index + 1}`;
+  return value[key] ?? value[altKey] ?? value[altKey2] ?? null;
+}
+
 function renderOfficerAnswers(
   value: Record<string, unknown> | null,
   role: string | null,
@@ -398,10 +405,10 @@ function renderOfficerAnswers(
     const keys = Object.keys(value).sort();
     return (
       <div className="view-all-answers">
-        {keys.map((key) => (
-          <div key={key} className="view-all-answer">
-            <strong>{key}</strong>
-            <div>{formatAnswerValue(value[key])}</div>
+        {keys.map((k) => (
+          <div key={k} className="view-all-answer">
+            <strong>{k}</strong>
+            <div>{formatAnswerValue(value[k])}</div>
           </div>
         ))}
       </div>
@@ -412,7 +419,7 @@ function renderOfficerAnswers(
       {questions.map((question, i) => (
         <div key={`${role}-${i}`} className="view-all-answer">
           <strong>{i + 1}. {question}</strong>
-          <div>{formatAnswerValue(value[`question_${i + 1}`])}</div>
+          <div>{formatAnswerValue(getAnswer(value, i))}</div>
         </div>
       ))}
     </div>
