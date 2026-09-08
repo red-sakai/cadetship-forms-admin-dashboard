@@ -727,6 +727,8 @@ img.app-logo {
 .dashboard-team-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-auto-rows: 1fr;
+  min-height: 560px;
   gap: 1rem;
 }
 
@@ -737,6 +739,7 @@ img.app-logo {
   background: #fff;
   box-shadow: var(--shadow-xs);
   display: grid;
+  grid-template-rows: auto 1fr;
   gap: 0.9rem;
 }
 
@@ -810,7 +813,6 @@ img.app-logo {
   gap: 1rem;
   min-width: 0;
   max-width: 100%;
-  overflow: hidden;
 }
 
 .dashboard-tabs-header {
@@ -1192,9 +1194,11 @@ img.app-logo {
 
 /* ----------------------------- View All modal ----------------------------- */
 
+dialog:not([open]) {
+  display: none !important;
+}
+
 .view-all-dialog {
-  max-width: calc(100vw - 3rem);
-  max-height: calc(100vh - 3rem);
   width: calc(100vw - 3rem);
   height: calc(100vh - 3rem);
   margin: auto;
@@ -1204,12 +1208,22 @@ img.app-logo {
   background: #fff;
   overflow: hidden;
   box-shadow: 0 25px 80px -12px rgba(0, 0, 0, 0.35);
+  z-index: 1000;
+  overscroll-behavior: contain;
+}
+
+.view-all-inner {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
 }
 
 .view-all-dialog::backdrop {
   background: rgba(15, 23, 42, 0.4);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
+  z-index: 999;
 }
 
 .view-all-dialog[open] {
@@ -1402,7 +1416,18 @@ img.app-logo {
 
 .view-all-body {
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+  overscroll-behavior: contain;
+}
+
+.view-all-table-wrap {
+  flex: 1;
   overflow: auto;
+  min-height: 0;
+  overscroll-behavior: contain;
 }
 
 .view-all-empty {
@@ -1429,9 +1454,6 @@ img.app-logo {
 }
 
 .view-all-table th {
-  position: sticky;
-  top: 0;
-  z-index: 2;
   background: #f1f5f9;
   color: var(--muted);
   font-weight: 700;

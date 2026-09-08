@@ -509,6 +509,25 @@ export default function ViewAllModal({
     return () => dialog.removeEventListener("close", handleClose);
   }, [onClose]);
 
+  useEffect(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const lenis = (window as any).__lenis;
+    if (open) {
+      document.documentElement.style.overflow = "hidden";
+      document.body.style.overflow = "hidden";
+      lenis?.stop();
+    } else {
+      document.documentElement.style.overflow = "";
+      document.body.style.overflow = "";
+      lenis?.start();
+    }
+    return () => {
+      document.documentElement.style.overflow = "";
+      document.body.style.overflow = "";
+      lenis?.start();
+    };
+  }, [open]);
+
   const getFilters = (): FilterKey[] => {
     switch (modalTab) {
       case "technology": return TECH_FILTERS;
@@ -944,7 +963,8 @@ export default function ViewAllModal({
   const rowCount = csvRows.length;
 
   return (
-    <dialog ref={dialogRef} className="view-all-dialog">
+    <dialog ref={dialogRef} className="view-all-dialog" data-lenis-prevent>
+      <div className="view-all-inner">
       <div className="view-all-header">
         <div className="view-all-header-left">
           <h2>View All Applicants</h2>
@@ -1012,8 +1032,11 @@ export default function ViewAllModal({
         {rowCount === 0 ? (
           <p className="view-all-empty">No submissions match your search.</p>
         ) : (
-          renderTable()
+          <div className="view-all-table-wrap">
+            {renderTable()}
+          </div>
         )}
+      </div>
       </div>
     </dialog>
   );

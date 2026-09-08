@@ -11,6 +11,9 @@ export default function SmoothScroll() {
       touchMultiplier: 1.2,
     });
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (window as any).__lenis = lenis;
+
     let frameId = 0;
     const raf = (time: number) => {
       lenis.raf(time);
@@ -20,6 +23,8 @@ export default function SmoothScroll() {
 
     return () => {
       cancelAnimationFrame(frameId);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (window as any).__lenis = undefined;
       lenis.destroy();
     };
   }, []);

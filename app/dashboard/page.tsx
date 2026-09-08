@@ -222,12 +222,24 @@ function buildMonthlyCounts(rows: RegistrationRow[], now: Date): MonthlyCount[] 
   return months;
 }
 
+function normalizeRole(value: unknown): string {
+  if (typeof value !== "string") return "";
+  return value.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
 function countMatches(
   rows: Array<Record<string, unknown>>,
   key: string,
   value: string,
 ): number {
-  return rows.filter((row) => row[key] === value).length;
+  const needle = normalizeRole(value);
+  return rows.filter((row) => {
+    const cell = normalizeRole(row[key]);
+    if (cell === needle) return true;
+    if (needle.endsWith("s") && cell === needle.slice(0, -1)) return true;
+    if (cell.endsWith("s") && cell.slice(0, -1) === needle) return true;
+    return false;
+  }).length;
 }
 
 function formatName(
