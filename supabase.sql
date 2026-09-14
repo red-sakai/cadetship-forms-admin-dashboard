@@ -187,5 +187,6 @@ create table public.to_be_interviewed (
         array['pending'::text, 'passed'::text, 'failed'::text]
       )
     )
-  )
+  ),
+  constraint to_be_interviewed_email_department_role_unique unique (email, department, role)
 ) TABLESPACE pg_default;

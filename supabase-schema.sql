@@ -128,7 +128,8 @@ CREATE TABLE IF NOT EXISTS to_be_interviewed (
   team TEXT,
   role TEXT,
   status TEXT DEFAULT 'pending',
-  created_at TIMESTAMPTZ DEFAULT now()
+  created_at TIMESTAMPTZ DEFAULT now(),
+  CONSTRAINT to_be_interviewed_email_department_role_unique UNIQUE (email, department, role)
 );
 
 -- ============================================
