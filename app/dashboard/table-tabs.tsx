@@ -1,10 +1,12 @@
 "use client";
 
-import { type ReactElement, useMemo, useState } from "react";
+import { type ReactElement, useMemo, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import CsvDownloadButton, { type CsvColumn } from "./csv-download";
 import ViewAllModal from "./view-all-modal";
 
 type PersonalRow = {
+  created_at: string | null;
   first_name: string | null;
   last_name: string | null;
   email: string | null;
@@ -21,6 +23,7 @@ type PersonalRow = {
 };
 
 type TechnologyCadetRow = {
+  created_at: string | null;
   first_name: string | null;
   last_name: string | null;
   email: string | null;
@@ -30,6 +33,7 @@ type TechnologyCadetRow = {
 };
 
 type OperationsRow = {
+  created_at: string | null;
   first_name: string | null;
   last_name: string | null;
   email: string | null;
@@ -39,6 +43,7 @@ type OperationsRow = {
 };
 
 type CreativesRow = {
+  created_at: string | null;
   first_name: string | null;
   last_name: string | null;
   email: string | null;
@@ -48,6 +53,7 @@ type CreativesRow = {
 };
 
 type MarketingRow = {
+  created_at: string | null;
   first_name: string | null;
   last_name: string | null;
   email: string | null;
@@ -57,6 +63,7 @@ type MarketingRow = {
 };
 
 type RelationsRow = {
+  created_at: string | null;
   first_name: string | null;
   last_name: string | null;
   email: string | null;
@@ -66,6 +73,7 @@ type RelationsRow = {
 };
 
 type AdministrativeRow = {
+  created_at: string | null;
   first_name: string | null;
   last_name: string | null;
   email: string | null;
@@ -78,11 +86,27 @@ type ExecutiveRow = AdministrativeRow & {
 };
 
 type FinanceRow = {
+  created_at: string | null;
   first_name: string | null;
   last_name: string | null;
   email: string | null;
   application_role: string | null;
   question_answers: Record<string, unknown> | null;
+};
+
+type EmailCheckpoint = {
+  email: string;
+  first_name: string | null;
+  last_name: string | null;
+  created_at: string;
+  marked_at: string | null;
+} | null;
+
+type CheckpointPerson = {
+  email: string;
+  first_name: string | null;
+  last_name: string | null;
+  created_at: string | null;
 };
 
 type TableTabsProps = {
@@ -95,6 +119,8 @@ type TableTabsProps = {
   administrativeRows: AdministrativeRow[];
   executiveRows: ExecutiveRow[];
   financeRows: FinanceRow[];
+  checkpoint: EmailCheckpoint;
+  onToggleCheckpoint: (person: CheckpointPerson) => Promise<void>;
 };
 
 type TabKey =
@@ -558,6 +584,40 @@ function matchesQuery(
   );
 }
 
+function toTime(value: string | null | undefined): number | null {
+  if (!value) return null;
+  const time = Date.parse(value);
+  return Number.isNaN(time) ? null : time;
+}
+
+function isCheckpointPerson(
+  row: { email?: string | null },
+  checkpoint: EmailCheckpoint,
+): boolean {
+  if (!checkpoint || !row.email) return false;
+  return row.email === checkpoint.email;
+}
+
+function isCheckpointRow(
+  row: { email?: string | null; created_at?: string | null },
+  checkpoint: EmailCheckpoint,
+): boolean {
+  if (!checkpoint) return false;
+  if (!isCheckpointPerson(row, checkpoint)) return false;
+  return (row.created_at ?? null) === checkpoint.created_at;
+}
+
+function isNotEmailed(
+  row: { created_at?: string | null },
+  checkpoint: EmailCheckpoint,
+): boolean {
+  if (!checkpoint) return true;
+  const cutoff = toTime(checkpoint.created_at);
+  const submitted = toTime(row.created_at);
+  if (cutoff === null || submitted === null) return true;
+  return submitted > cutoff;
+}
+
 export default function TableTabs({
   personalRows,
   technologyCadetRows,
@@ -568,10 +628,15 @@ export default function TableTabs({
   administrativeRows,
   executiveRows,
   financeRows,
+  checkpoint,
+  onToggleCheckpoint,
 }: TableTabsProps) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
   const [activeTab, setActiveTab] = useState<TabKey>("personal");
   const [query, setQuery] = useState<string>("");
   const [page, setPage] = useState<number>(1);
+  const [notEmailedOnly, setNotEmailedOnly] = useState<boolean>(false);
   const [techFilter, setTechFilter] = useState<TechFilterKey>("All");
   const [opsFilter, setOpsFilter] = useState<OpsFilterKey>("All");
   const [creativesFilter, setCreativesFilter] =
@@ -625,90 +690,104 @@ export default function TableTabs({
     setFinanceFilter(filter);
     setPage(1);
   };
+  const handleNotEmailedToggle = () => {
+    setNotEmailedOnly((prev) => !prev);
+    setPage(1);
+  };
+  const handleToggleCheckpoint = (person: CheckpointPerson) => {
+    startTransition(async () => {
+      await onToggleCheckpoint(person);
+      router.refresh();
+    });
+  };
 
   const filteredPersonalRows = useMemo(() => {
-    return personalRows.filter((row) => matchesQuery(row, query));
-  }, [personalRows, query]);
+    return personalRows.filter(
+      (row) =>
+        matchesQuery(row, query) &&
+        (!notEmailedOnly || isNotEmailed(row, checkpoint)),
+    );
+  }, [personalRows, query, notEmailedOnly, checkpoint]);
   const filteredTechCadetRows = useMemo(() => {
-    if (techFilter === "All") {
-      return technologyCadetRows.filter((row) => matchesQuery(row, query));
-    }
-
-    return technologyCadetRows.filter(
+    const base = technologyCadetRows.filter(
       (row) =>
-        row.track === techFilter && matchesQuery(row, query),
+        (techFilter === "All" || row.track === techFilter) &&
+        matchesQuery(row, query),
     );
-  }, [technologyCadetRows, techFilter, query]);
+    return notEmailedOnly
+      ? base.filter((row) => isNotEmailed(row, checkpoint))
+      : base;
+  }, [technologyCadetRows, techFilter, query, notEmailedOnly, checkpoint]);
   const filteredOperationsRows = useMemo(() => {
-    if (opsFilter === "All") {
-      return operationsRows.filter((row) => matchesQuery(row, query));
-    }
-
-    return operationsRows.filter(
+    const base = operationsRows.filter(
       (row) =>
-        row.application_role === opsFilter && matchesQuery(row, query),
+        (opsFilter === "All" || row.application_role === opsFilter) &&
+        matchesQuery(row, query),
     );
-  }, [operationsRows, opsFilter, query]);
+    return notEmailedOnly
+      ? base.filter((row) => isNotEmailed(row, checkpoint))
+      : base;
+  }, [operationsRows, opsFilter, query, notEmailedOnly, checkpoint]);
   const filteredCreativesRows = useMemo(() => {
-    if (creativesFilter === "All") {
-      return creativesRows.filter((row) => matchesQuery(row, query));
-    }
-
-    return creativesRows.filter(
+    const base = creativesRows.filter(
       (row) =>
-        row.application_role === creativesFilter && matchesQuery(row, query),
+        (creativesFilter === "All" || row.application_role === creativesFilter) &&
+        matchesQuery(row, query),
     );
-  }, [creativesFilter, creativesRows, query]);
+    return notEmailedOnly
+      ? base.filter((row) => isNotEmailed(row, checkpoint))
+      : base;
+  }, [creativesFilter, creativesRows, query, notEmailedOnly, checkpoint]);
   const filteredMarketingRows = useMemo(() => {
-    if (marketingFilter === "All") {
-      return marketingRows.filter((row) => matchesQuery(row, query));
-    }
-
-    return marketingRows.filter(
+    const base = marketingRows.filter(
       (row) =>
-        row.application_role === marketingFilter && matchesQuery(row, query),
+        (marketingFilter === "All" || row.application_role === marketingFilter) &&
+        matchesQuery(row, query),
     );
-  }, [marketingFilter, marketingRows, query]);
+    return notEmailedOnly
+      ? base.filter((row) => isNotEmailed(row, checkpoint))
+      : base;
+  }, [marketingFilter, marketingRows, query, notEmailedOnly, checkpoint]);
   const filteredRelationsRows = useMemo(() => {
-    if (relationsFilter === "All") {
-      return relationsRows.filter((row) => matchesQuery(row, query));
-    }
-
-    return relationsRows.filter(
+    const base = relationsRows.filter(
       (row) =>
-        row.application_role === relationsFilter && matchesQuery(row, query),
+        (relationsFilter === "All" || row.application_role === relationsFilter) &&
+        matchesQuery(row, query),
     );
-  }, [relationsFilter, relationsRows, query]);
+    return notEmailedOnly
+      ? base.filter((row) => isNotEmailed(row, checkpoint))
+      : base;
+  }, [relationsFilter, relationsRows, query, notEmailedOnly, checkpoint]);
   const filteredAdministrativeRows = useMemo(() => {
-    if (adminFilter === "All") {
-      return administrativeRows.filter((row) => matchesQuery(row, query));
-    }
-
-    return administrativeRows.filter(
+    const base = administrativeRows.filter(
       (row) =>
-        row.application_role === adminFilter && matchesQuery(row, query),
+        (adminFilter === "All" || row.application_role === adminFilter) &&
+        matchesQuery(row, query),
     );
-  }, [adminFilter, administrativeRows, query]);
+    return notEmailedOnly
+      ? base.filter((row) => isNotEmailed(row, checkpoint))
+      : base;
+  }, [adminFilter, administrativeRows, query, notEmailedOnly, checkpoint]);
   const filteredExecutiveRows = useMemo(() => {
-    if (execFilter === "All") {
-      return executiveRows.filter((row) => matchesQuery(row, query));
-    }
-
-    return executiveRows.filter(
+    const base = executiveRows.filter(
       (row) =>
-        row.application_role === execFilter && matchesQuery(row, query),
+        (execFilter === "All" || row.application_role === execFilter) &&
+        matchesQuery(row, query),
     );
-  }, [execFilter, executiveRows, query]);
+    return notEmailedOnly
+      ? base.filter((row) => isNotEmailed(row, checkpoint))
+      : base;
+  }, [execFilter, executiveRows, query, notEmailedOnly, checkpoint]);
   const filteredFinanceRows = useMemo(() => {
-    if (financeFilter === "All") {
-      return financeRows.filter((row) => matchesQuery(row, query));
-    }
-
-    return financeRows.filter(
+    const base = financeRows.filter(
       (row) =>
-        row.application_role === financeFilter && matchesQuery(row, query),
+        (financeFilter === "All" || row.application_role === financeFilter) &&
+        matchesQuery(row, query),
     );
-  }, [financeFilter, financeRows, query]);
+    return notEmailedOnly
+      ? base.filter((row) => isNotEmailed(row, checkpoint))
+      : base;
+  }, [financeFilter, financeRows, query, notEmailedOnly, checkpoint]);
   const activeRows = useMemo(() => {
     if (activeTab === "personal") {
       return filteredPersonalRows;
@@ -814,6 +893,15 @@ export default function TableTabs({
   const renderCsvButton = () => {
     if (activeTab === "personal") {
       const columns: CsvColumn<PersonalRow>[] = [
+        {
+          label: "Email status",
+          value: (row) =>
+            isCheckpointRow(row, checkpoint)
+              ? "Emailed up to here"
+              : isNotEmailed(row, checkpoint)
+                ? "Not emailed"
+                : "Emailed",
+        },
         { label: "First name", value: (row) => row.first_name },
         { label: "Last name", value: (row) => row.last_name },
         { label: "Email", value: (row) => row.email },
@@ -1107,6 +1195,21 @@ export default function TableTabs({
           <span className="dashboard-tab-count">{rowCount} rows</span>
           <button
             type="button"
+            className={`dashboard-filter ${
+              notEmailedOnly && checkpoint ? "is-active" : ""
+            }`}
+            onClick={handleNotEmailedToggle}
+            disabled={!checkpoint}
+            title={
+              checkpoint
+                ? "Show only people who registered after the marked person"
+                : "Mark a person in the Personal Info table first"
+            }
+          >
+            Not yet emailed
+          </button>
+          <button
+            type="button"
             className="dashboard-button"
             onClick={() => setViewAllOpen(true)}
           >
@@ -1147,6 +1250,7 @@ export default function TableTabs({
           <table className="dashboard-table">
             <thead>
               <tr>
+                <th>Email status</th>
                 <th>First name</th>
                 <th>Last name</th>
                 <th>Email</th>
@@ -1157,17 +1261,49 @@ export default function TableTabs({
               </tr>
             </thead>
             <tbody>
-              {pagedPersonalRows.map((row, index) => (
-                <tr key={`${row.email ?? "row"}-${index}`}>
-                  <td>{row.first_name ?? "-"}</td>
-                  <td>{row.last_name ?? "-"}</td>
-                  <td>{row.email ?? "-"}</td>
-                  <td>{row.phone ?? "-"}</td>
-                  <td>{row.course_year_section ?? "-"}</td>
-                  <td>{row.college_campus ?? "-"}</td>
-                  <td>{row.membership_type ?? "-"}</td>
-                </tr>
-              ))}
+              {pagedPersonalRows.map((row, index) => {
+                const isMarked = isCheckpointRow(row, checkpoint);
+
+                return (
+                  <tr
+                    key={`${row.email ?? "row"}-${index}`}
+                    className={isMarked ? "is-checkpoint" : ""}
+                  >
+                    <td>
+                      <button
+                        type="button"
+                        className={`dashboard-mark-button ${
+                          isMarked ? "is-active" : ""
+                        }`}
+                        disabled={isPending || !row.email}
+                        title={
+                          isMarked
+                            ? "Emails were sent up to and including this person. Click to clear."
+                            : "Mark this person as the last one emailed"
+                        }
+                        onClick={() => {
+                          if (!row.email) return;
+                          handleToggleCheckpoint({
+                            email: row.email,
+                            first_name: row.first_name,
+                            last_name: row.last_name,
+                            created_at: row.created_at,
+                          });
+                        }}
+                      >
+                        {isMarked ? "Emailed up to here" : "Mark as sent"}
+                      </button>
+                    </td>
+                    <td>{row.first_name ?? "-"}</td>
+                    <td>{row.last_name ?? "-"}</td>
+                    <td>{row.email ?? "-"}</td>
+                    <td>{row.phone ?? "-"}</td>
+                    <td>{row.course_year_section ?? "-"}</td>
+                    <td>{row.college_campus ?? "-"}</td>
+                    <td>{row.membership_type ?? "-"}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
           <div className="dashboard-pagination">
@@ -1237,7 +1373,12 @@ export default function TableTabs({
                 </thead>
                 <tbody>
                   {pagedTechCadetRows.map((row, index) => (
-                    <tr key={`${row.email ?? "row"}-${index}`}>
+                    <tr
+                      key={`${row.email ?? "row"}-${index}`}
+                      className={
+                        isCheckpointPerson(row, checkpoint) ? "is-checkpoint" : ""
+                      }
+                    >
                       <td>{row.first_name ?? "-"}</td>
                       <td>{row.last_name ?? "-"}</td>
                       <td>{row.email ?? "-"}</td>
@@ -1315,7 +1456,12 @@ export default function TableTabs({
                 </thead>
                 <tbody>
                   {pagedOperationsRows.map((row, index) => (
-                    <tr key={`${row.email ?? "row"}-${index}`}>
+                    <tr
+                      key={`${row.email ?? "row"}-${index}`}
+                      className={
+                        isCheckpointPerson(row, checkpoint) ? "is-checkpoint" : ""
+                      }
+                    >
                       <td>{row.first_name ?? "-"}</td>
                       <td>{row.last_name ?? "-"}</td>
                       <td>{row.email ?? "-"}</td>
@@ -1393,7 +1539,12 @@ export default function TableTabs({
                 </thead>
                 <tbody>
                   {pagedCreativesRows.map((row, index) => (
-                    <tr key={`${row.email ?? "row"}-${index}`}>
+                    <tr
+                      key={`${row.email ?? "row"}-${index}`}
+                      className={
+                        isCheckpointPerson(row, checkpoint) ? "is-checkpoint" : ""
+                      }
+                    >
                       <td>{row.first_name ?? "-"}</td>
                       <td>{row.last_name ?? "-"}</td>
                       <td>{row.email ?? "-"}</td>
@@ -1471,7 +1622,12 @@ export default function TableTabs({
                 </thead>
                 <tbody>
                   {pagedMarketingRows.map((row, index) => (
-                    <tr key={`${row.email ?? "row"}-${index}`}>
+                    <tr
+                      key={`${row.email ?? "row"}-${index}`}
+                      className={
+                        isCheckpointPerson(row, checkpoint) ? "is-checkpoint" : ""
+                      }
+                    >
                       <td>{row.first_name ?? "-"}</td>
                       <td>{row.last_name ?? "-"}</td>
                       <td>{row.email ?? "-"}</td>
@@ -1549,7 +1705,12 @@ export default function TableTabs({
                 </thead>
                 <tbody>
                   {pagedRelationsRows.map((row, index) => (
-                    <tr key={`${row.email ?? "row"}-${index}`}>
+                    <tr
+                      key={`${row.email ?? "row"}-${index}`}
+                      className={
+                        isCheckpointPerson(row, checkpoint) ? "is-checkpoint" : ""
+                      }
+                    >
                       <td>{row.first_name ?? "-"}</td>
                       <td>{row.last_name ?? "-"}</td>
                       <td>{row.email ?? "-"}</td>
@@ -1626,7 +1787,12 @@ export default function TableTabs({
                 </thead>
                 <tbody>
                   {pagedExecutiveRows.map((row, index) => (
-                    <tr key={`${row.email ?? "row"}-${index}`}>
+                    <tr
+                      key={`${row.email ?? "row"}-${index}`}
+                      className={
+                        isCheckpointPerson(row, checkpoint) ? "is-checkpoint" : ""
+                      }
+                    >
                       <td>{row.first_name ?? "-"}</td>
                       <td>{row.last_name ?? "-"}</td>
                       <td>{row.email ?? "-"}</td>
@@ -1702,7 +1868,12 @@ export default function TableTabs({
                 </thead>
                 <tbody>
                   {pagedFinanceRows.map((row, index) => (
-                    <tr key={`${row.email ?? "row"}-${index}`}>
+                    <tr
+                      key={`${row.email ?? "row"}-${index}`}
+                      className={
+                        isCheckpointPerson(row, checkpoint) ? "is-checkpoint" : ""
+                      }
+                    >
                       <td>{row.first_name ?? "-"}</td>
                       <td>{row.last_name ?? "-"}</td>
                       <td>{row.email ?? "-"}</td>
@@ -1778,7 +1949,12 @@ export default function TableTabs({
                 </thead>
                 <tbody>
                   {pagedAdministrativeRows.map((row, index) => (
-                    <tr key={`${row.email ?? "row"}-${index}`}>
+                    <tr
+                      key={`${row.email ?? "row"}-${index}`}
+                      className={
+                        isCheckpointPerson(row, checkpoint) ? "is-checkpoint" : ""
+                      }
+                    >
                       <td>{row.first_name ?? "-"}</td>
                       <td>{row.last_name ?? "-"}</td>
                       <td>{row.email ?? "-"}</td>
@@ -1834,6 +2010,8 @@ export default function TableTabs({
       administrativeRows={administrativeRows}
       executiveRows={executiveRows}
       financeRows={financeRows}
+      checkpoint={checkpoint}
+      onToggleCheckpoint={onToggleCheckpoint}
     />
     </>
   );

@@ -960,6 +960,84 @@ img.app-logo {
   color: var(--accent-strong);
 }
 
+.dashboard-filter:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.dashboard-filter:disabled:hover {
+  color: var(--muted);
+  border-color: var(--border);
+}
+
+/* --------------------------- Email checkpoint ---------------------------- */
+
+.dashboard-mark-button {
+  appearance: none;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.26rem 0.65rem;
+  background: #fff;
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 0.68rem;
+  font-family: inherit;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease,
+    color 0.15s ease;
+}
+
+.dashboard-mark-button:hover:not(:disabled) {
+  color: var(--accent-strong);
+  border-color: #c4b5fd;
+  background: var(--accent-soft);
+}
+
+.dashboard-mark-button.is-active {
+  background: var(--accent-soft);
+  border-color: #c4b5fd;
+  color: var(--accent-strong);
+}
+
+.dashboard-mark-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.view-all-mark-button {
+  appearance: none;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.26rem 0.65rem;
+  background: #fff;
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 0.68rem;
+  font-family: inherit;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease,
+    color 0.15s ease;
+}
+
+.view-all-mark-button:hover:not(:disabled) {
+  color: var(--accent-strong);
+  border-color: #c4b5fd;
+  background: var(--accent-soft);
+}
+
+.view-all-mark-button.is-active {
+  background: var(--accent-soft);
+  border-color: #c4b5fd;
+  color: var(--accent-strong);
+}
+
+.view-all-mark-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* ---------------------------------- Table --------------------------------- */
 
 .dashboard-table-wrap {
@@ -1003,6 +1081,14 @@ img.app-logo {
 
 .dashboard-table tbody tr:hover {
   background: #f8fafc;
+}
+
+.dashboard-table tbody tr.is-checkpoint td {
+  background: var(--accent-soft);
+}
+
+.dashboard-table tbody tr.is-checkpoint td:first-child {
+  box-shadow: inset 3px 0 0 var(--accent);
 }
 
 .dashboard-table tbody tr:last-child td {
@@ -1386,6 +1472,17 @@ dialog:not([open]) {
   box-shadow: 0 1px 3px rgba(124, 58, 237, 0.25);
 }
 
+.view-all-filter:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.view-all-filter:disabled:hover {
+  color: #64748b;
+  background: #f1f5f9;
+  border-color: transparent;
+}
+
 .view-all-search {
   display: flex;
   align-items: center;
@@ -1464,6 +1561,14 @@ dialog:not([open]) {
 
 .view-all-table tbody tr:hover {
   background: #f8fafc;
+}
+
+.view-all-table tbody tr.is-checkpoint td {
+  background: var(--accent-soft);
+}
+
+.view-all-table tbody tr.is-checkpoint td:first-child {
+  box-shadow: inset 3px 0 0 var(--accent);
 }
 
 .view-all-table tbody tr:last-child td {

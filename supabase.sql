@@ -190,3 +190,13 @@ create table public.to_be_interviewed (
   ),
   constraint to_be_interviewed_email_department_role_unique unique (email, department, role)
 ) TABLESPACE pg_default;
+
+create table public.email_checkpoint (
+  id integer primary key default 1,
+  email text not null,
+  first_name text null,
+  last_name text null,
+  created_at timestamp with time zone not null,
+  marked_at timestamp with time zone not null default now(),
+  constraint email_checkpoint_single_row check (id = 1)
+) TABLESPACE pg_default;

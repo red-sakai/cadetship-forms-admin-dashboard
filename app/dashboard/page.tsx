@@ -104,6 +104,7 @@ type RegistrationRow = {
 };
 
 type TechnologyCadetRow = {
+  created_at: string | null;
   first_name: string | null;
   last_name: string | null;
   email: string | null;
@@ -113,6 +114,7 @@ type TechnologyCadetRow = {
 };
 
 type OperationsRow = {
+  created_at: string | null;
   first_name: string | null;
   last_name: string | null;
   email: string | null;
@@ -122,6 +124,7 @@ type OperationsRow = {
 };
 
 type CreativesRow = {
+  created_at: string | null;
   first_name: string | null;
   last_name: string | null;
   email: string | null;
@@ -131,6 +134,7 @@ type CreativesRow = {
 };
 
 type MarketingRow = {
+  created_at: string | null;
   first_name: string | null;
   last_name: string | null;
   email: string | null;
@@ -140,6 +144,7 @@ type MarketingRow = {
 };
 
 type RelationsRow = {
+  created_at: string | null;
   first_name: string | null;
   last_name: string | null;
   email: string | null;
@@ -149,6 +154,7 @@ type RelationsRow = {
 };
 
 type AdministrativeRow = {
+  created_at: string | null;
   first_name: string | null;
   last_name: string | null;
   email: string | null;
@@ -161,6 +167,7 @@ type ExecutiveRow = AdministrativeRow & {
 };
 
 type FinanceRow = {
+  created_at: string | null;
   first_name: string | null;
   last_name: string | null;
   email: string | null;
@@ -177,6 +184,14 @@ type ToBeInterviewedRow = {
   role: string | null;
   status: "pending" | "passed" | "failed";
 };
+
+type EmailCheckpoint = {
+  email: string;
+  first_name: string | null;
+  last_name: string | null;
+  created_at: string;
+  marked_at: string | null;
+} | null;
 
 type MonthlyCount = {
   label: string;
@@ -280,6 +295,54 @@ async function updateInterviewStatus(id: string, status: ToBeInterviewedRow["sta
   await supabase.from("to_be_interviewed").update({ status }).eq("id", id);
 }
 
+async function toggleEmailCheckpoint(person: {
+  email: string;
+  first_name: string | null;
+  last_name: string | null;
+  created_at: string | null;
+}) {
+  "use server";
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
+  const supabaseAnonKey =
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? "";
+
+  if (!supabaseUrl || !supabaseAnonKey || !person.email || !person.created_at) {
+    return;
+  }
+
+  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    auth: { persistSession: false },
+    global: {
+      fetch: (url, options) =>
+        fetch(url, { ...options, cache: "no-store" }),
+    },
+  });
+
+  const { data: current } = await supabase
+    .from("email_checkpoint")
+    .select("email")
+    .eq("id", 1)
+    .maybeSingle();
+
+  if (current?.email === person.email) {
+    await supabase.from("email_checkpoint").delete().eq("id", 1);
+    return;
+  }
+
+  await supabase.from("email_checkpoint").upsert(
+    {
+      id: 1,
+      email: person.email,
+      first_name: person.first_name,
+      last_name: person.last_name,
+      created_at: person.created_at,
+      marked_at: new Date().toISOString(),
+    },
+    { onConflict: "id" },
+  );
+}
+
 export default async function DashboardPage() {
   const cookieStore = await cookies();
   const isAuthed = cookieStore.get("admin_auth")?.value === "1";
@@ -306,6 +369,7 @@ export default async function DashboardPage() {
   let executiveRows: ExecutiveRow[] = [];
   let financeRows: FinanceRow[] = [];
   let interviewRows: ToBeInterviewedRow[] = [];
+  let checkpoint: EmailCheckpoint = null;
 
   if (!supabaseUrl || !supabaseAnonKey) {
     loadError = "Supabase credentials are not configured.";
@@ -317,7 +381,8 @@ export default async function DashboardPage() {
           fetch(url, { ...options, cache: "no-store" }),
       },
     });
-    const [reg, tech, ops, creat, mkt, rel, admin, exec, fin] = await Promise.all([
+    const [reg, tech, ops, creat, mkt, rel, admin, exec, fin, chk] =
+      await Promise.all([
       supabase
         .from("registration_personal_info")
         .select(
@@ -381,6 +446,13 @@ export default async function DashboardPage() {
           "id, created_at, first_name, last_name, email, application_role, question_answers",
         )
         .order("created_at", { ascending: false }),
+
+      // Checkpoint errors are ignored on purpose: the dashboard must keep
+      // working even if email_checkpoint.sql has not been run yet.
+      supabase
+        .from("email_checkpoint")
+        .select("email, first_name, last_name, created_at, marked_at")
+        .maybeSingle(),
     ]);
 
     const { data, error } = reg;
@@ -472,6 +544,8 @@ export default async function DashboardPage() {
         .select("id, name, email, department, team, role, status")
         .order("created_at", { ascending: false });
       interviewRows = (interviewData as ToBeInterviewedRow[]) ?? [];
+
+      checkpoint = (chk.data as EmailCheckpoint) ?? null;
     }
   }
 
@@ -877,6 +951,8 @@ export default async function DashboardPage() {
                   administrativeRows={administrativeRows}
                   executiveRows={executiveRows}
                   financeRows={financeRows}
+                  checkpoint={checkpoint}
+                  onToggleCheckpoint={toggleEmailCheckpoint}
                 />
               )}
             </div>

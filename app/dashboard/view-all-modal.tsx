@@ -1,9 +1,11 @@
 "use client";
 
-import { type ReactElement, useEffect, useMemo, useRef, useState } from "react";
+import { type ReactElement, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import CsvDownloadButton, { type CsvColumn } from "./csv-download";
 
 type PersonalRow = {
+  created_at: string | null;
   first_name: string | null;
   last_name: string | null;
   email: string | null;
@@ -20,6 +22,7 @@ type PersonalRow = {
 };
 
 type TechnologyCadetRow = {
+  created_at: string | null;
   first_name: string | null;
   last_name: string | null;
   email: string | null;
@@ -29,6 +32,7 @@ type TechnologyCadetRow = {
 };
 
 type OperationsRow = {
+  created_at: string | null;
   first_name: string | null;
   last_name: string | null;
   email: string | null;
@@ -38,6 +42,7 @@ type OperationsRow = {
 };
 
 type CreativesRow = {
+  created_at: string | null;
   first_name: string | null;
   last_name: string | null;
   email: string | null;
@@ -47,6 +52,7 @@ type CreativesRow = {
 };
 
 type MarketingRow = {
+  created_at: string | null;
   first_name: string | null;
   last_name: string | null;
   email: string | null;
@@ -56,6 +62,7 @@ type MarketingRow = {
 };
 
 type RelationsRow = {
+  created_at: string | null;
   first_name: string | null;
   last_name: string | null;
   email: string | null;
@@ -65,6 +72,7 @@ type RelationsRow = {
 };
 
 type AdministrativeRow = {
+  created_at: string | null;
   first_name: string | null;
   last_name: string | null;
   email: string | null;
@@ -75,11 +83,27 @@ type AdministrativeRow = {
 type ExecutiveRow = AdministrativeRow;
 
 type FinanceRow = {
+  created_at: string | null;
   first_name: string | null;
   last_name: string | null;
   email: string | null;
   application_role: string | null;
   question_answers: Record<string, unknown> | null;
+};
+
+type EmailCheckpoint = {
+  email: string;
+  first_name: string | null;
+  last_name: string | null;
+  created_at: string;
+  marked_at: string | null;
+} | null;
+
+type CheckpointPerson = {
+  email: string;
+  first_name: string | null;
+  last_name: string | null;
+  created_at: string | null;
 };
 
 type TabKey =
@@ -108,6 +132,8 @@ type ViewAllModalProps = {
   administrativeRows: AdministrativeRow[];
   executiveRows: ExecutiveRow[];
   financeRows: FinanceRow[];
+  checkpoint: EmailCheckpoint;
+  onToggleCheckpoint: (person: CheckpointPerson) => Promise<void>;
 };
 
 const TABS: { key: TabKey; label: string }[] = [
@@ -368,6 +394,40 @@ function matchesQuery(
   return first.includes(needle) || last.includes(needle) || email.includes(needle);
 }
 
+function toTime(value: string | null | undefined): number | null {
+  if (!value) return null;
+  const time = Date.parse(value);
+  return Number.isNaN(time) ? null : time;
+}
+
+function isCheckpointPerson(
+  row: { email?: string | null },
+  checkpoint: EmailCheckpoint,
+): boolean {
+  if (!checkpoint || !row.email) return false;
+  return row.email === checkpoint.email;
+}
+
+function isCheckpointRow(
+  row: { email?: string | null; created_at?: string | null },
+  checkpoint: EmailCheckpoint,
+): boolean {
+  if (!checkpoint) return false;
+  if (!isCheckpointPerson(row, checkpoint)) return false;
+  return (row.created_at ?? null) === checkpoint.created_at;
+}
+
+function isNotEmailed(
+  row: { created_at?: string | null },
+  checkpoint: EmailCheckpoint,
+): boolean {
+  if (!checkpoint) return true;
+  const cutoff = toTime(checkpoint.created_at);
+  const submitted = toTime(row.created_at);
+  if (cutoff === null || submitted === null) return true;
+  return submitted > cutoff;
+}
+
 function renderTechAnswers(
   track: string | null,
   q1: string | null,
@@ -463,10 +523,15 @@ export default function ViewAllModal({
   administrativeRows,
   executiveRows,
   financeRows,
+  checkpoint,
+  onToggleCheckpoint,
 }: ViewAllModalProps) {
+  const router = useRouter();
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const [isPending, startTransition] = useTransition();
   const [modalTab, setModalTab] = useState<TabKey>(initialTab);
   const [query, setQuery] = useState("");
+  const [notEmailedOnly, setNotEmailedOnly] = useState(false);
   const [techFilter, setTechFilter] = useState<FilterKey>("All");
   const [opsFilter, setOpsFilter] = useState<FilterKey>("All");
   const [creativesFilter, setCreativesFilter] = useState<FilterKey>("All");
@@ -480,6 +545,7 @@ export default function ViewAllModal({
     if (open) {
       setModalTab(initialTab);
       setQuery("");
+      setNotEmailedOnly(false);
       setTechFilter("All");
       setOpsFilter("All");
       setCreativesFilter("All");
@@ -569,66 +635,94 @@ export default function ViewAllModal({
     }
   };
 
+  const handleToggleCheckpoint = (person: CheckpointPerson) => {
+    startTransition(async () => {
+      await onToggleCheckpoint(person);
+      router.refresh();
+    });
+  };
+
   const filteredPersonalRows = useMemo(
-    () => personalRows.filter((r) => matchesQuery(r, query)),
-    [personalRows, query],
+    () =>
+      personalRows.filter(
+        (r) =>
+          matchesQuery(r, query) &&
+          (!notEmailedOnly || isNotEmailed(r, checkpoint)),
+      ),
+    [personalRows, query, notEmailedOnly, checkpoint],
   );
 
   const filteredTechRows = useMemo(() => {
     const base = techFilter === "All"
       ? technologyCadetRows
       : technologyCadetRows.filter((r) => r.track === techFilter);
-    return base.filter((r) => matchesQuery(r, query));
-  }, [technologyCadetRows, techFilter, query]);
+    return base
+      .filter((r) => matchesQuery(r, query))
+      .filter((r) => !notEmailedOnly || isNotEmailed(r, checkpoint));
+  }, [technologyCadetRows, techFilter, query, notEmailedOnly, checkpoint]);
 
   const filteredOpsRows = useMemo(() => {
     const base = opsFilter === "All"
       ? operationsRows
       : operationsRows.filter((r) => r.application_role === opsFilter);
-    return base.filter((r) => matchesQuery(r, query));
-  }, [operationsRows, opsFilter, query]);
+    return base
+      .filter((r) => matchesQuery(r, query))
+      .filter((r) => !notEmailedOnly || isNotEmailed(r, checkpoint));
+  }, [operationsRows, opsFilter, query, notEmailedOnly, checkpoint]);
 
   const filteredCreativesRows = useMemo(() => {
     const base = creativesFilter === "All"
       ? creativesRows
       : creativesRows.filter((r) => r.application_role === creativesFilter);
-    return base.filter((r) => matchesQuery(r, query));
-  }, [creativesRows, creativesFilter, query]);
+    return base
+      .filter((r) => matchesQuery(r, query))
+      .filter((r) => !notEmailedOnly || isNotEmailed(r, checkpoint));
+  }, [creativesRows, creativesFilter, query, notEmailedOnly, checkpoint]);
 
   const filteredMarketingRows = useMemo(() => {
     const base = marketingFilter === "All"
       ? marketingRows
       : marketingRows.filter((r) => r.application_role === marketingFilter);
-    return base.filter((r) => matchesQuery(r, query));
-  }, [marketingRows, marketingFilter, query]);
+    return base
+      .filter((r) => matchesQuery(r, query))
+      .filter((r) => !notEmailedOnly || isNotEmailed(r, checkpoint));
+  }, [marketingFilter, marketingRows, query, notEmailedOnly, checkpoint]);
 
   const filteredRelationsRows = useMemo(() => {
     const base = relationsFilter === "All"
       ? relationsRows
       : relationsRows.filter((r) => r.application_role === relationsFilter);
-    return base.filter((r) => matchesQuery(r, query));
-  }, [relationsRows, relationsFilter, query]);
+    return base
+      .filter((r) => matchesQuery(r, query))
+      .filter((r) => !notEmailedOnly || isNotEmailed(r, checkpoint));
+  }, [relationsFilter, relationsRows, query, notEmailedOnly, checkpoint]);
 
   const filteredAdminRows = useMemo(() => {
     const base = adminFilter === "All"
       ? administrativeRows
       : administrativeRows.filter((r) => r.application_role === adminFilter);
-    return base.filter((r) => matchesQuery(r, query));
-  }, [administrativeRows, adminFilter, query]);
+    return base
+      .filter((r) => matchesQuery(r, query))
+      .filter((r) => !notEmailedOnly || isNotEmailed(r, checkpoint));
+  }, [administrativeRows, adminFilter, query, notEmailedOnly, checkpoint]);
 
   const filteredExecRows = useMemo(() => {
     const base = execFilter === "All"
       ? executiveRows
       : executiveRows.filter((r) => r.application_role === execFilter);
-    return base.filter((r) => matchesQuery(r, query));
-  }, [executiveRows, execFilter, query]);
+    return base
+      .filter((r) => matchesQuery(r, query))
+      .filter((r) => !notEmailedOnly || isNotEmailed(r, checkpoint));
+  }, [executiveRows, execFilter, query, notEmailedOnly, checkpoint]);
 
   const filteredFinanceRows = useMemo(() => {
     const base = financeFilter === "All"
       ? financeRows
       : financeRows.filter((r) => r.application_role === financeFilter);
-    return base.filter((r) => matchesQuery(r, query));
-  }, [financeRows, financeFilter, query]);
+    return base
+      .filter((r) => matchesQuery(r, query))
+      .filter((r) => !notEmailedOnly || isNotEmailed(r, checkpoint));
+  }, [financeRows, financeFilter, query, notEmailedOnly, checkpoint]);
 
   const activeFilter = getActiveFilter();
   const filters = getFilters();
@@ -641,6 +735,7 @@ export default function ViewAllModal({
         <table className="view-all-table">
           <thead>
             <tr>
+              <th>Email status</th>
               <th>First name</th><th>Last name</th><th>Email</th>
               <th>Facebook link</th><th>Facebook shared post</th><th>Discord</th>
               <th>LinkedIn</th><th>PUP webmail</th><th>Phone</th>
@@ -649,23 +744,53 @@ export default function ViewAllModal({
             </tr>
           </thead>
           <tbody>
-            {filteredPersonalRows.map((row, i) => (
-              <tr key={`${row.email ?? "r"}-${i}`}>
-                <td>{row.first_name ?? "-"}</td>
-                <td>{row.last_name ?? "-"}</td>
-                <td>{row.email ?? "-"}</td>
-                <td>{row.facebook_link ? <a href={row.facebook_link} target="_blank" rel="noreferrer">View</a> : "-"}</td>
-                <td>{row.facebook_shared_post ? <a href={row.facebook_shared_post} target="_blank" rel="noreferrer">View</a> : "-"}</td>
-                <td>{row.discord_username ?? "-"}</td>
-                <td>{row.linkedin_link ? <a href={row.linkedin_link} target="_blank" rel="noreferrer">View</a> : "-"}</td>
-                <td>{row.pup_webmail ?? "-"}</td>
-                <td>{row.phone ?? "-"}</td>
-                <td>{row.course_year_section ?? "-"}</td>
-                <td>{row.certificate_link ? <a href={row.certificate_link} target="_blank" rel="noreferrer">View</a> : "-"}</td>
-                <td>{row.college_campus ?? "-"}</td>
-                <td>{row.membership_type ?? "-"}</td>
-              </tr>
-            ))}
+            {filteredPersonalRows.map((row, i) => {
+              const isMarked = isCheckpointRow(row, checkpoint);
+
+              return (
+                <tr
+                  key={`${row.email ?? "r"}-${i}`}
+                  className={isMarked ? "is-checkpoint" : ""}
+                >
+                  <td>
+                    <button
+                      type="button"
+                      className={`view-all-mark-button ${isMarked ? "is-active" : ""}`}
+                      disabled={isPending || !row.email}
+                      title={
+                        isMarked
+                          ? "Emails were sent up to and including this person. Click to clear."
+                          : "Mark this person as the last one emailed"
+                      }
+                      onClick={() => {
+                        if (!row.email) return;
+                        handleToggleCheckpoint({
+                          email: row.email,
+                          first_name: row.first_name,
+                          last_name: row.last_name,
+                          created_at: row.created_at,
+                        });
+                      }}
+                    >
+                      {isMarked ? "Emailed up to here" : "Mark as sent"}
+                    </button>
+                  </td>
+                  <td>{row.first_name ?? "-"}</td>
+                  <td>{row.last_name ?? "-"}</td>
+                  <td>{row.email ?? "-"}</td>
+                  <td>{row.facebook_link ? <a href={row.facebook_link} target="_blank" rel="noreferrer">View</a> : "-"}</td>
+                  <td>{row.facebook_shared_post ? <a href={row.facebook_shared_post} target="_blank" rel="noreferrer">View</a> : "-"}</td>
+                  <td>{row.discord_username ?? "-"}</td>
+                  <td>{row.linkedin_link ? <a href={row.linkedin_link} target="_blank" rel="noreferrer">View</a> : "-"}</td>
+                  <td>{row.pup_webmail ?? "-"}</td>
+                  <td>{row.phone ?? "-"}</td>
+                  <td>{row.course_year_section ?? "-"}</td>
+                  <td>{row.certificate_link ? <a href={row.certificate_link} target="_blank" rel="noreferrer">View</a> : "-"}</td>
+                  <td>{row.college_campus ?? "-"}</td>
+                  <td>{row.membership_type ?? "-"}</td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       );
@@ -681,7 +806,12 @@ export default function ViewAllModal({
           </thead>
           <tbody>
             {filteredTechRows.map((row, i) => (
-              <tr key={`${row.email ?? "r"}-${i}`}>
+              <tr
+                key={`${row.email ?? "r"}-${i}`}
+                className={
+                  isCheckpointPerson(row, checkpoint) ? "is-checkpoint" : ""
+                }
+              >
                 <td>{row.first_name ?? "-"}</td>
                 <td>{row.last_name ?? "-"}</td>
                 <td>{row.email ?? "-"}</td>
@@ -704,7 +834,12 @@ export default function ViewAllModal({
           </thead>
           <tbody>
             {filteredOpsRows.map((row, i) => (
-              <tr key={`${row.email ?? "r"}-${i}`}>
+              <tr
+                key={`${row.email ?? "r"}-${i}`}
+                className={
+                  isCheckpointPerson(row, checkpoint) ? "is-checkpoint" : ""
+                }
+              >
                 <td>{row.first_name ?? "-"}</td>
                 <td>{row.last_name ?? "-"}</td>
                 <td>{row.email ?? "-"}</td>
@@ -728,7 +863,12 @@ export default function ViewAllModal({
           </thead>
           <tbody>
             {filteredCreativesRows.map((row, i) => (
-              <tr key={`${row.email ?? "r"}-${i}`}>
+              <tr
+                key={`${row.email ?? "r"}-${i}`}
+                className={
+                  isCheckpointPerson(row, checkpoint) ? "is-checkpoint" : ""
+                }
+              >
                 <td>{row.first_name ?? "-"}</td>
                 <td>{row.last_name ?? "-"}</td>
                 <td>{row.email ?? "-"}</td>
@@ -752,7 +892,12 @@ export default function ViewAllModal({
           </thead>
           <tbody>
             {filteredMarketingRows.map((row, i) => (
-              <tr key={`${row.email ?? "r"}-${i}`}>
+              <tr
+                key={`${row.email ?? "r"}-${i}`}
+                className={
+                  isCheckpointPerson(row, checkpoint) ? "is-checkpoint" : ""
+                }
+              >
                 <td>{row.first_name ?? "-"}</td>
                 <td>{row.last_name ?? "-"}</td>
                 <td>{row.email ?? "-"}</td>
@@ -776,7 +921,12 @@ export default function ViewAllModal({
           </thead>
           <tbody>
             {filteredRelationsRows.map((row, i) => (
-              <tr key={`${row.email ?? "r"}-${i}`}>
+              <tr
+                key={`${row.email ?? "r"}-${i}`}
+                className={
+                  isCheckpointPerson(row, checkpoint) ? "is-checkpoint" : ""
+                }
+              >
                 <td>{row.first_name ?? "-"}</td>
                 <td>{row.last_name ?? "-"}</td>
                 <td>{row.email ?? "-"}</td>
@@ -800,7 +950,12 @@ export default function ViewAllModal({
           </thead>
           <tbody>
             {filteredAdminRows.map((row, i) => (
-              <tr key={`${row.email ?? "r"}-${i}`}>
+              <tr
+                key={`${row.email ?? "r"}-${i}`}
+                className={
+                  isCheckpointPerson(row, checkpoint) ? "is-checkpoint" : ""
+                }
+              >
                 <td>{row.first_name ?? "-"}</td>
                 <td>{row.last_name ?? "-"}</td>
                 <td>{row.email ?? "-"}</td>
@@ -823,7 +978,12 @@ export default function ViewAllModal({
           </thead>
           <tbody>
             {filteredExecRows.map((row, i) => (
-              <tr key={`${row.email ?? "r"}-${i}`}>
+              <tr
+                key={`${row.email ?? "r"}-${i}`}
+                className={
+                  isCheckpointPerson(row, checkpoint) ? "is-checkpoint" : ""
+                }
+              >
                 <td>{row.first_name ?? "-"}</td>
                 <td>{row.last_name ?? "-"}</td>
                 <td>{row.email ?? "-"}</td>
@@ -845,7 +1005,12 @@ export default function ViewAllModal({
         </thead>
         <tbody>
           {filteredFinanceRows.map((row, i) => (
-            <tr key={`${row.email ?? "r"}-${i}`}>
+            <tr
+                key={`${row.email ?? "r"}-${i}`}
+                className={
+                  isCheckpointPerson(row, checkpoint) ? "is-checkpoint" : ""
+                }
+              >
               <td>{row.first_name ?? "-"}</td>
               <td>{row.last_name ?? "-"}</td>
               <td>{row.email ?? "-"}</td>
@@ -864,6 +1029,17 @@ export default function ViewAllModal({
     if (modalTab === "personal") {
       rows = filteredPersonalRows;
       csvColumns.push(
+        {
+          label: "Email status",
+          value: (r: unknown) => {
+            const row = r as PersonalRow;
+            return isCheckpointRow(row, checkpoint)
+              ? "Emailed up to here"
+              : isNotEmailed(row, checkpoint)
+                ? "Not emailed"
+                : "Emailed";
+          },
+        },
         { label: "First name", value: (r: unknown) => (r as PersonalRow).first_name },
         { label: "Last name", value: (r: unknown) => (r as PersonalRow).last_name },
         { label: "Email", value: (r: unknown) => (r as PersonalRow).email },
@@ -999,6 +1175,22 @@ export default function ViewAllModal({
             </button>
           ))}
         </div>
+
+        <button
+          type="button"
+          className={`view-all-filter ${
+            notEmailedOnly && checkpoint ? "is-active" : ""
+          }`}
+          disabled={!checkpoint}
+          title={
+            checkpoint
+              ? "Show only people who registered after the marked person"
+              : "Mark a person in the Personal Info table first"
+          }
+          onClick={() => setNotEmailedOnly((prev) => !prev)}
+        >
+          Not yet emailed
+        </button>
 
         {filters.length > 0 && (
           <div className="view-all-filters">
