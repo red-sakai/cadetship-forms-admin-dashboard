@@ -185,14 +185,6 @@ type ToBeInterviewedRow = {
   status: "pending" | "passed" | "failed";
 };
 
-type EmailCheckpoint = {
-  email: string;
-  first_name: string | null;
-  last_name: string | null;
-  created_at: string;
-  marked_at: string | null;
-} | null;
-
 type MonthlyCount = {
   label: string;
   count: number;
@@ -295,19 +287,14 @@ async function updateInterviewStatus(id: string, status: ToBeInterviewedRow["sta
   await supabase.from("to_be_interviewed").update({ status }).eq("id", id);
 }
 
-async function toggleEmailCheckpoint(person: {
-  email: string;
-  first_name: string | null;
-  last_name: string | null;
-  created_at: string | null;
-}) {
+async function setEmailed(emails: string[], emailed: boolean) {
   "use server";
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
   const supabaseAnonKey =
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? "";
 
-  if (!supabaseUrl || !supabaseAnonKey || !person.email || !person.created_at) {
+  if (!supabaseUrl || !supabaseAnonKey || emails.length === 0) {
     return;
   }
 
@@ -319,28 +306,18 @@ async function toggleEmailCheckpoint(person: {
     },
   });
 
-  const { data: current } = await supabase
-    .from("email_checkpoint")
-    .select("email")
-    .eq("id", 1)
-    .maybeSingle();
-
-  if (current?.email === person.email) {
-    await supabase.from("email_checkpoint").delete().eq("id", 1);
+  if (emailed) {
+    await supabase.from("emailed_applicants").upsert(
+      emails.map((email) => ({
+        email,
+        marked_at: new Date().toISOString(),
+      })),
+      { onConflict: "email" },
+    );
     return;
   }
 
-  await supabase.from("email_checkpoint").upsert(
-    {
-      id: 1,
-      email: person.email,
-      first_name: person.first_name,
-      last_name: person.last_name,
-      created_at: person.created_at,
-      marked_at: new Date().toISOString(),
-    },
-    { onConflict: "id" },
-  );
+  await supabase.from("emailed_applicants").delete().in("email", emails);
 }
 
 export default async function DashboardPage() {
@@ -369,7 +346,7 @@ export default async function DashboardPage() {
   let executiveRows: ExecutiveRow[] = [];
   let financeRows: FinanceRow[] = [];
   let interviewRows: ToBeInterviewedRow[] = [];
-  let checkpoint: EmailCheckpoint = null;
+  let emailedEmails: string[] = [];
 
   if (!supabaseUrl || !supabaseAnonKey) {
     loadError = "Supabase credentials are not configured.";
@@ -447,12 +424,9 @@ export default async function DashboardPage() {
         )
         .order("created_at", { ascending: false }),
 
-      // Checkpoint errors are ignored on purpose: the dashboard must keep
-      // working even if email_checkpoint.sql has not been run yet.
-      supabase
-        .from("email_checkpoint")
-        .select("email, first_name, last_name, created_at, marked_at")
-        .maybeSingle(),
+      // Errors are ignored on purpose: the dashboard must keep
+      // working even if emailed-applicants.sql has not been run yet.
+      supabase.from("emailed_applicants").select("email"),
     ]);
 
     const { data, error } = reg;
@@ -545,7 +519,11 @@ export default async function DashboardPage() {
         .order("created_at", { ascending: false });
       interviewRows = (interviewData as ToBeInterviewedRow[]) ?? [];
 
-      checkpoint = (chk.data as EmailCheckpoint) ?? null;
+      emailedEmails = chk.error
+        ? []
+        : ((chk.data as { email: string }[] | null) ?? [])
+            .map((row) => row.email)
+            .filter(Boolean);
     }
   }
 
@@ -951,8 +929,8 @@ export default async function DashboardPage() {
                   administrativeRows={administrativeRows}
                   executiveRows={executiveRows}
                   financeRows={financeRows}
-                  checkpoint={checkpoint}
-                  onToggleCheckpoint={toggleEmailCheckpoint}
+                  emailedEmails={emailedEmails}
+                  onSetEmailed={setEmailed}
                 />
               )}
             </div>

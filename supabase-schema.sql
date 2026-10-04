@@ -132,15 +132,10 @@ CREATE TABLE IF NOT EXISTS to_be_interviewed (
   CONSTRAINT to_be_interviewed_email_department_role_unique UNIQUE (email, department, role)
 );
 
--- Email checkpoint (single row: "emails sent up to and including this person")
-CREATE TABLE IF NOT EXISTS email_checkpoint (
-  id INT PRIMARY KEY DEFAULT 1,
-  email TEXT NOT NULL,
-  first_name TEXT,
-  last_name TEXT,
-  created_at TIMESTAMPTZ NOT NULL,
-  marked_at TIMESTAMPTZ DEFAULT now(),
-  CONSTRAINT email_checkpoint_single_row CHECK (id = 1)
+-- Emailed applicants (one row per person already emailed)
+CREATE TABLE IF NOT EXISTS emailed_applicants (
+  email TEXT PRIMARY KEY,
+  marked_at TIMESTAMPTZ DEFAULT now()
 );
 
 -- ============================================
@@ -158,7 +153,7 @@ ALTER TABLE registration_administrative_department ENABLE ROW LEVEL SECURITY;
 ALTER TABLE registration_executive_department ENABLE ROW LEVEL SECURITY;
 ALTER TABLE registration_finance_department ENABLE ROW LEVEL SECURITY;
 ALTER TABLE to_be_interviewed ENABLE ROW LEVEL SECURITY;
-ALTER TABLE email_checkpoint ENABLE ROW LEVEL SECURITY;
+ALTER TABLE emailed_applicants ENABLE ROW LEVEL SECURITY;
 
 -- Allow anonymous INSERT and SELECT on all tables
 -- (registration forms use the anon/public Supabase key)
@@ -279,24 +274,24 @@ CREATE POLICY "Allow anonymous select on to_be_interviewed"
   TO anon
   USING (true);
 
--- email_checkpoint
-CREATE POLICY "Allow anonymous select on email_checkpoint"
-  ON email_checkpoint FOR SELECT
+-- emailed_applicants
+CREATE POLICY "Allow anonymous select on emailed_applicants"
+  ON emailed_applicants FOR SELECT
   TO anon
   USING (true);
 
-CREATE POLICY "Allow anonymous insert on email_checkpoint"
-  ON email_checkpoint FOR INSERT
+CREATE POLICY "Allow anonymous insert on emailed_applicants"
+  ON emailed_applicants FOR INSERT
   TO anon
   WITH CHECK (true);
 
-CREATE POLICY "Allow anonymous update on email_checkpoint"
-  ON email_checkpoint FOR UPDATE
+CREATE POLICY "Allow anonymous update on emailed_applicants"
+  ON emailed_applicants FOR UPDATE
   TO anon
   USING (true)
   WITH CHECK (true);
 
-CREATE POLICY "Allow anonymous delete on email_checkpoint"
-  ON email_checkpoint FOR DELETE
+CREATE POLICY "Allow anonymous delete on emailed_applicants"
+  ON emailed_applicants FOR DELETE
   TO anon
   USING (true);

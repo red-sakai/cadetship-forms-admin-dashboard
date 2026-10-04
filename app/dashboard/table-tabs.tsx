@@ -3,6 +3,7 @@
 import { type ReactElement, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import CsvDownloadButton, { type CsvColumn } from "./csv-download";
+import MarkEmailedDialog from "./mark-emailed-dialog";
 import ViewAllModal from "./view-all-modal";
 
 type PersonalRow = {
@@ -94,21 +95,6 @@ type FinanceRow = {
   question_answers: Record<string, unknown> | null;
 };
 
-type EmailCheckpoint = {
-  email: string;
-  first_name: string | null;
-  last_name: string | null;
-  created_at: string;
-  marked_at: string | null;
-} | null;
-
-type CheckpointPerson = {
-  email: string;
-  first_name: string | null;
-  last_name: string | null;
-  created_at: string | null;
-};
-
 type TableTabsProps = {
   personalRows: PersonalRow[];
   technologyCadetRows: TechnologyCadetRow[];
@@ -119,8 +105,8 @@ type TableTabsProps = {
   administrativeRows: AdministrativeRow[];
   executiveRows: ExecutiveRow[];
   financeRows: FinanceRow[];
-  checkpoint: EmailCheckpoint;
-  onToggleCheckpoint: (person: CheckpointPerson) => Promise<void>;
+  emailedEmails: string[];
+  onSetEmailed: (emails: string[], emailed: boolean) => Promise<void>;
 };
 
 type TabKey =
@@ -250,6 +236,31 @@ const FINANCE_FILTERS: FinanceFilterKey[] = [
   "Vice Chief Finance Officer",
   "Auditor",
 ];
+
+const DEPARTMENT_LINKS: Record<string, string> = {
+  "Developer Network":
+    "https://m.me/j/PNxTnV8LIncLSCRi/?send_source=gc%3Acopy_invite_link_t",
+  "Enterprise Networking":
+    "https://m.me/j/3xemI2XWbz1Zp1W4/?send_source=gc%3Acopy_invite_link_t",
+  "Cybersecurity Operations":
+    "https://m.me/j/n5OURnJzN4qN4Dfi/?send_source=gc%3Acopy_invite_link_t",
+  Operations:
+    "https://m.me/j/Abba9YyKV5BtsPRR/?send_source=gc%3Acopy_invite_link_t",
+  Creatives:
+    "https://m.me/j/AbYzcrfnepkhpkOX/?send_source=gc%3Acopy_invite_link_t",
+  Marketing:
+    "https://m.me/j/1nhPXU3xAFbB0bkP/?send_source=gc%3Acopy_invite_link_t",
+  Relations:
+    "https://m.me/j/JvA1CIx5kJ0Zke7v/?send_source=gc:copy_invite_link_c",
+  Administrative:
+    "https://m.me/j/W9mTTEWFgTZUlbJ4/?send_source=gc%3Acopy_invite_link_t",
+  Executive: "",
+  Finance: "",
+};
+
+function linkColumn<T>(link: string): CsvColumn<T> {
+  return { label: "Link", value: () => link };
+}
 
 function paginateRows<T>(rows: T[], page: number): T[] {
   const start = (page - 1) * PAGE_SIZE;
@@ -584,38 +595,11 @@ function matchesQuery(
   );
 }
 
-function toTime(value: string | null | undefined): number | null {
-  if (!value) return null;
-  const time = Date.parse(value);
-  return Number.isNaN(time) ? null : time;
-}
-
-function isCheckpointPerson(
+function isEmailedRow(
   row: { email?: string | null },
-  checkpoint: EmailCheckpoint,
+  emailedSet: Set<string>,
 ): boolean {
-  if (!checkpoint || !row.email) return false;
-  return row.email === checkpoint.email;
-}
-
-function isCheckpointRow(
-  row: { email?: string | null; created_at?: string | null },
-  checkpoint: EmailCheckpoint,
-): boolean {
-  if (!checkpoint) return false;
-  if (!isCheckpointPerson(row, checkpoint)) return false;
-  return (row.created_at ?? null) === checkpoint.created_at;
-}
-
-function isNotEmailed(
-  row: { created_at?: string | null },
-  checkpoint: EmailCheckpoint,
-): boolean {
-  if (!checkpoint) return true;
-  const cutoff = toTime(checkpoint.created_at);
-  const submitted = toTime(row.created_at);
-  if (cutoff === null || submitted === null) return true;
-  return submitted > cutoff;
+  return !!row.email && emailedSet.has(row.email);
 }
 
 export default function TableTabs({
@@ -628,8 +612,8 @@ export default function TableTabs({
   administrativeRows,
   executiveRows,
   financeRows,
-  checkpoint,
-  onToggleCheckpoint,
+  emailedEmails,
+  onSetEmailed,
 }: TableTabsProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -637,6 +621,10 @@ export default function TableTabs({
   const [query, setQuery] = useState<string>("");
   const [page, setPage] = useState<number>(1);
   const [notEmailedOnly, setNotEmailedOnly] = useState<boolean>(false);
+  const [markPrompt, setMarkPrompt] = useState<{
+    email: string;
+    belowEmails: string[];
+  } | null>(null);
   const [techFilter, setTechFilter] = useState<TechFilterKey>("All");
   const [opsFilter, setOpsFilter] = useState<OpsFilterKey>("All");
   const [creativesFilter, setCreativesFilter] =
@@ -694,20 +682,22 @@ export default function TableTabs({
     setNotEmailedOnly((prev) => !prev);
     setPage(1);
   };
-  const handleToggleCheckpoint = (person: CheckpointPerson) => {
+  const handleSetEmailed = (emails: string[], emailed: boolean) => {
     startTransition(async () => {
-      await onToggleCheckpoint(person);
+      await onSetEmailed(emails, emailed);
       router.refresh();
     });
   };
+
+  const emailedSet = useMemo(() => new Set(emailedEmails), [emailedEmails]);
 
   const filteredPersonalRows = useMemo(() => {
     return personalRows.filter(
       (row) =>
         matchesQuery(row, query) &&
-        (!notEmailedOnly || isNotEmailed(row, checkpoint)),
+        (!notEmailedOnly || !isEmailedRow(row, emailedSet)),
     );
-  }, [personalRows, query, notEmailedOnly, checkpoint]);
+  }, [personalRows, query, notEmailedOnly, emailedSet]);
   const filteredTechCadetRows = useMemo(() => {
     const base = technologyCadetRows.filter(
       (row) =>
@@ -715,9 +705,9 @@ export default function TableTabs({
         matchesQuery(row, query),
     );
     return notEmailedOnly
-      ? base.filter((row) => isNotEmailed(row, checkpoint))
+      ? base.filter((row) => !isEmailedRow(row, emailedSet))
       : base;
-  }, [technologyCadetRows, techFilter, query, notEmailedOnly, checkpoint]);
+  }, [technologyCadetRows, techFilter, query, notEmailedOnly, emailedSet]);
   const filteredOperationsRows = useMemo(() => {
     const base = operationsRows.filter(
       (row) =>
@@ -725,9 +715,9 @@ export default function TableTabs({
         matchesQuery(row, query),
     );
     return notEmailedOnly
-      ? base.filter((row) => isNotEmailed(row, checkpoint))
+      ? base.filter((row) => !isEmailedRow(row, emailedSet))
       : base;
-  }, [operationsRows, opsFilter, query, notEmailedOnly, checkpoint]);
+  }, [operationsRows, opsFilter, query, notEmailedOnly, emailedSet]);
   const filteredCreativesRows = useMemo(() => {
     const base = creativesRows.filter(
       (row) =>
@@ -735,9 +725,9 @@ export default function TableTabs({
         matchesQuery(row, query),
     );
     return notEmailedOnly
-      ? base.filter((row) => isNotEmailed(row, checkpoint))
+      ? base.filter((row) => !isEmailedRow(row, emailedSet))
       : base;
-  }, [creativesFilter, creativesRows, query, notEmailedOnly, checkpoint]);
+  }, [creativesFilter, creativesRows, query, notEmailedOnly, emailedSet]);
   const filteredMarketingRows = useMemo(() => {
     const base = marketingRows.filter(
       (row) =>
@@ -745,9 +735,9 @@ export default function TableTabs({
         matchesQuery(row, query),
     );
     return notEmailedOnly
-      ? base.filter((row) => isNotEmailed(row, checkpoint))
+      ? base.filter((row) => !isEmailedRow(row, emailedSet))
       : base;
-  }, [marketingFilter, marketingRows, query, notEmailedOnly, checkpoint]);
+  }, [marketingFilter, marketingRows, query, notEmailedOnly, emailedSet]);
   const filteredRelationsRows = useMemo(() => {
     const base = relationsRows.filter(
       (row) =>
@@ -755,9 +745,9 @@ export default function TableTabs({
         matchesQuery(row, query),
     );
     return notEmailedOnly
-      ? base.filter((row) => isNotEmailed(row, checkpoint))
+      ? base.filter((row) => !isEmailedRow(row, emailedSet))
       : base;
-  }, [relationsFilter, relationsRows, query, notEmailedOnly, checkpoint]);
+  }, [relationsFilter, relationsRows, query, notEmailedOnly, emailedSet]);
   const filteredAdministrativeRows = useMemo(() => {
     const base = administrativeRows.filter(
       (row) =>
@@ -765,9 +755,9 @@ export default function TableTabs({
         matchesQuery(row, query),
     );
     return notEmailedOnly
-      ? base.filter((row) => isNotEmailed(row, checkpoint))
+      ? base.filter((row) => !isEmailedRow(row, emailedSet))
       : base;
-  }, [adminFilter, administrativeRows, query, notEmailedOnly, checkpoint]);
+  }, [adminFilter, administrativeRows, query, notEmailedOnly, emailedSet]);
   const filteredExecutiveRows = useMemo(() => {
     const base = executiveRows.filter(
       (row) =>
@@ -775,9 +765,9 @@ export default function TableTabs({
         matchesQuery(row, query),
     );
     return notEmailedOnly
-      ? base.filter((row) => isNotEmailed(row, checkpoint))
+      ? base.filter((row) => !isEmailedRow(row, emailedSet))
       : base;
-  }, [execFilter, executiveRows, query, notEmailedOnly, checkpoint]);
+  }, [execFilter, executiveRows, query, notEmailedOnly, emailedSet]);
   const filteredFinanceRows = useMemo(() => {
     const base = financeRows.filter(
       (row) =>
@@ -785,9 +775,35 @@ export default function TableTabs({
         matchesQuery(row, query),
     );
     return notEmailedOnly
-      ? base.filter((row) => isNotEmailed(row, checkpoint))
+      ? base.filter((row) => !isEmailedRow(row, emailedSet))
       : base;
-  }, [financeFilter, financeRows, query, notEmailedOnly, checkpoint]);
+  }, [financeFilter, financeRows, query, notEmailedOnly, emailedSet]);
+
+  const handleMarkAsSent = (row: PersonalRow) => {
+    if (!row.email) return;
+
+    const index = filteredPersonalRows.indexOf(row);
+    const belowEmails =
+      index === -1
+        ? []
+        : Array.from(
+            new Set(
+              filteredPersonalRows
+                .slice(index + 1)
+                .map((below) => below.email)
+                .filter(
+                  (email): email is string => !!email && !emailedSet.has(email),
+                ),
+            ),
+          );
+
+    if (belowEmails.length === 0) {
+      handleSetEmailed([row.email], true);
+      return;
+    }
+
+    setMarkPrompt({ email: row.email, belowEmails });
+  };
   const activeRows = useMemo(() => {
     if (activeTab === "personal") {
       return filteredPersonalRows;
@@ -886,6 +902,17 @@ export default function TableTabs({
     filteredFinanceRows.length,
   ]);
 
+  const bulkEmails = useMemo(() => {
+    const unique = new Set<string>();
+    activeRows.forEach((row) => {
+      const email = (row as { email?: string | null }).email;
+      if (email && !emailedSet.has(email)) {
+        unique.add(email);
+      }
+    });
+    return Array.from(unique);
+  }, [activeRows, emailedSet]);
+
   const dateStamp = useMemo(() => {
     return new Date().toISOString().slice(0, 10);
   }, []);
@@ -896,11 +923,7 @@ export default function TableTabs({
         {
           label: "Email status",
           value: (row) =>
-            isCheckpointRow(row, checkpoint)
-              ? "Emailed up to here"
-              : isNotEmailed(row, checkpoint)
-                ? "Not emailed"
-                : "Emailed",
+            isEmailedRow(row, emailedSet) ? "Emailed" : "Not emailed",
         },
         { label: "First name", value: (row) => row.first_name },
         { label: "Last name", value: (row) => row.last_name },
@@ -936,6 +959,9 @@ export default function TableTabs({
         { label: "Track", value: (row) => row.track },
         { label: "Question 1 answer", value: (row) => row.question_1 },
         { label: "Question 2 answer", value: (row) => row.question_2 },
+        linkColumn<TechnologyCadetRow>(
+          techFilter === "All" ? "" : DEPARTMENT_LINKS[techFilter] ?? "",
+        ),
       ];
 
       return (
@@ -957,6 +983,7 @@ export default function TableTabs({
         { label: "Committee", value: (row) => row.committee },
         { label: "Application role", value: (row) => row.application_role },
         { label: "Question answers", value: (row) => formatCsvValue(row.question_answers) },
+        linkColumn<OperationsRow>(DEPARTMENT_LINKS["Operations"]),
       ];
 
       return (
@@ -978,6 +1005,7 @@ export default function TableTabs({
         { label: "Team", value: (row) => row.team },
         { label: "Application role", value: (row) => row.application_role },
         { label: "Question answers", value: (row) => formatCsvValue(row.question_answers) },
+        linkColumn<CreativesRow>(DEPARTMENT_LINKS["Creatives"]),
       ];
 
       return (
@@ -999,6 +1027,7 @@ export default function TableTabs({
         { label: "Team", value: (row) => row.team },
         { label: "Application role", value: (row) => row.application_role },
         { label: "Question answers", value: (row) => formatCsvValue(row.question_answers) },
+        linkColumn<MarketingRow>(DEPARTMENT_LINKS["Marketing"]),
       ];
 
       return (
@@ -1020,6 +1049,7 @@ export default function TableTabs({
         { label: "Team", value: (row) => row.team },
         { label: "Application role", value: (row) => row.application_role },
         { label: "Question answers", value: (row) => formatCsvValue(row.question_answers) },
+        linkColumn<RelationsRow>(DEPARTMENT_LINKS["Relations"]),
       ];
 
       return (
@@ -1038,6 +1068,7 @@ export default function TableTabs({
         { label: "Email", value: (row) => row.email },
         { label: "Application role", value: (row) => row.application_role },
         { label: "Question answers", value: (row) => formatCsvValue(row.question_answers) },
+        linkColumn<ExecutiveRow>(DEPARTMENT_LINKS["Executive"]),
       ];
 
       return (
@@ -1058,6 +1089,7 @@ export default function TableTabs({
         { label: "Email", value: (row) => row.email },
         { label: "Application role", value: (row) => row.application_role },
         { label: "Question answers", value: (row) => formatCsvValue(row.question_answers) },
+        linkColumn<FinanceRow>(DEPARTMENT_LINKS["Finance"]),
       ];
 
       return (
@@ -1074,12 +1106,13 @@ export default function TableTabs({
       { label: "Last name", value: (row) => row.last_name },
       { label: "Email", value: (row) => row.email },
       { label: "Application role", value: (row) => row.application_role },
-      { label: "Question answers", value: (row) => formatCsvValue(row.question_answers) },
-    ];
+        { label: "Question answers", value: (row) => formatCsvValue(row.question_answers) },
+        linkColumn<AdministrativeRow>(DEPARTMENT_LINKS["Administrative"]),
+      ];
 
-    return (
-      <CsvDownloadButton
-        rows={filteredAdministrativeRows}
+      return (
+        <CsvDownloadButton
+          rows={filteredAdministrativeRows}
         columns={columns}
         fileName={`administrative-${dateStamp}.csv`}
       />
@@ -1196,17 +1229,38 @@ export default function TableTabs({
           <button
             type="button"
             className={`dashboard-filter ${
-              notEmailedOnly && checkpoint ? "is-active" : ""
+              notEmailedOnly && emailedEmails.length > 0 ? "is-active" : ""
             }`}
             onClick={handleNotEmailedToggle}
-            disabled={!checkpoint}
+            disabled={emailedEmails.length === 0}
             title={
-              checkpoint
-                ? "Show only people who registered after the marked person"
-                : "Mark a person in the Personal Info table first"
+              emailedEmails.length > 0
+                ? "Show only people who have not been emailed yet"
+                : "Mark people as emailed first"
             }
           >
             Not yet emailed
+          </button>
+          <button
+            type="button"
+            className="dashboard-button"
+            disabled={isPending || bulkEmails.length === 0}
+            title="Mark every not-yet-emailed person currently shown as emailed"
+            onClick={() => {
+              if (
+                !window.confirm(
+                  `Mark ${bulkEmails.length} shown applicant${bulkEmails.length === 1 ? "" : "s"} as emailed?`,
+                )
+              ) {
+                return;
+              }
+              handleSetEmailed(bulkEmails, true);
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+            Mark all shown as emailed
           </button>
           <button
             type="button"
@@ -1262,36 +1316,35 @@ export default function TableTabs({
             </thead>
             <tbody>
               {pagedPersonalRows.map((row, index) => {
-                const isMarked = isCheckpointRow(row, checkpoint);
+                const emailed = isEmailedRow(row, emailedSet);
 
                 return (
                   <tr
                     key={`${row.email ?? "row"}-${index}`}
-                    className={isMarked ? "is-checkpoint" : ""}
+                    className={emailed ? "is-emailed" : ""}
                   >
                     <td>
                       <button
                         type="button"
                         className={`dashboard-mark-button ${
-                          isMarked ? "is-active" : ""
+                          emailed ? "is-active" : ""
                         }`}
                         disabled={isPending || !row.email}
                         title={
-                          isMarked
-                            ? "Emails were sent up to and including this person. Click to clear."
-                            : "Mark this person as the last one emailed"
+                          emailed
+                            ? "Marked as emailed. Click to remove the mark."
+                            : "Mark this person as emailed"
                         }
                         onClick={() => {
                           if (!row.email) return;
-                          handleToggleCheckpoint({
-                            email: row.email,
-                            first_name: row.first_name,
-                            last_name: row.last_name,
-                            created_at: row.created_at,
-                          });
+                          if (emailed) {
+                            handleSetEmailed([row.email], false);
+                            return;
+                          }
+                          handleMarkAsSent(row);
                         }}
                       >
-                        {isMarked ? "Emailed up to here" : "Mark as sent"}
+                        {emailed ? "Emailed" : "Mark as sent"}
                       </button>
                     </td>
                     <td>{row.first_name ?? "-"}</td>
@@ -1376,7 +1429,7 @@ export default function TableTabs({
                     <tr
                       key={`${row.email ?? "row"}-${index}`}
                       className={
-                        isCheckpointPerson(row, checkpoint) ? "is-checkpoint" : ""
+                        isEmailedRow(row, emailedSet) ? "is-emailed" : ""
                       }
                     >
                       <td>{row.first_name ?? "-"}</td>
@@ -1459,7 +1512,7 @@ export default function TableTabs({
                     <tr
                       key={`${row.email ?? "row"}-${index}`}
                       className={
-                        isCheckpointPerson(row, checkpoint) ? "is-checkpoint" : ""
+                        isEmailedRow(row, emailedSet) ? "is-emailed" : ""
                       }
                     >
                       <td>{row.first_name ?? "-"}</td>
@@ -1542,7 +1595,7 @@ export default function TableTabs({
                     <tr
                       key={`${row.email ?? "row"}-${index}`}
                       className={
-                        isCheckpointPerson(row, checkpoint) ? "is-checkpoint" : ""
+                        isEmailedRow(row, emailedSet) ? "is-emailed" : ""
                       }
                     >
                       <td>{row.first_name ?? "-"}</td>
@@ -1625,7 +1678,7 @@ export default function TableTabs({
                     <tr
                       key={`${row.email ?? "row"}-${index}`}
                       className={
-                        isCheckpointPerson(row, checkpoint) ? "is-checkpoint" : ""
+                        isEmailedRow(row, emailedSet) ? "is-emailed" : ""
                       }
                     >
                       <td>{row.first_name ?? "-"}</td>
@@ -1708,7 +1761,7 @@ export default function TableTabs({
                     <tr
                       key={`${row.email ?? "row"}-${index}`}
                       className={
-                        isCheckpointPerson(row, checkpoint) ? "is-checkpoint" : ""
+                        isEmailedRow(row, emailedSet) ? "is-emailed" : ""
                       }
                     >
                       <td>{row.first_name ?? "-"}</td>
@@ -1790,7 +1843,7 @@ export default function TableTabs({
                     <tr
                       key={`${row.email ?? "row"}-${index}`}
                       className={
-                        isCheckpointPerson(row, checkpoint) ? "is-checkpoint" : ""
+                        isEmailedRow(row, emailedSet) ? "is-emailed" : ""
                       }
                     >
                       <td>{row.first_name ?? "-"}</td>
@@ -1871,7 +1924,7 @@ export default function TableTabs({
                     <tr
                       key={`${row.email ?? "row"}-${index}`}
                       className={
-                        isCheckpointPerson(row, checkpoint) ? "is-checkpoint" : ""
+                        isEmailedRow(row, emailedSet) ? "is-emailed" : ""
                       }
                     >
                       <td>{row.first_name ?? "-"}</td>
@@ -1952,7 +2005,7 @@ export default function TableTabs({
                     <tr
                       key={`${row.email ?? "row"}-${index}`}
                       className={
-                        isCheckpointPerson(row, checkpoint) ? "is-checkpoint" : ""
+                        isEmailedRow(row, emailedSet) ? "is-emailed" : ""
                       }
                     >
                       <td>{row.first_name ?? "-"}</td>
@@ -2010,8 +2063,28 @@ export default function TableTabs({
       administrativeRows={administrativeRows}
       executiveRows={executiveRows}
       financeRows={financeRows}
-      checkpoint={checkpoint}
-      onToggleCheckpoint={onToggleCheckpoint}
+      emailedEmails={emailedEmails}
+      onSetEmailed={onSetEmailed}
+    />
+    <MarkEmailedDialog
+      open={markPrompt !== null}
+      belowCount={markPrompt?.belowEmails.length ?? 0}
+      busy={isPending}
+      onMarkThisAndBelow={() => {
+        if (!markPrompt) return;
+        const emails = Array.from(
+          new Set([markPrompt.email, ...markPrompt.belowEmails]),
+        );
+        setMarkPrompt(null);
+        handleSetEmailed(emails, true);
+      }}
+      onMarkOnlyThis={() => {
+        if (!markPrompt) return;
+        const email = markPrompt.email;
+        setMarkPrompt(null);
+        handleSetEmailed([email], true);
+      }}
+      onCancel={() => setMarkPrompt(null)}
     />
     </>
   );

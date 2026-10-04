@@ -970,7 +970,7 @@ img.app-logo {
   border-color: var(--border);
 }
 
-/* --------------------------- Email checkpoint ---------------------------- */
+/* ---------------------------- Emailed marks ------------------------------ */
 
 .dashboard-mark-button {
   appearance: none;
@@ -994,10 +994,11 @@ img.app-logo {
   background: var(--accent-soft);
 }
 
-.dashboard-mark-button.is-active {
-  background: var(--accent-soft);
-  border-color: #c4b5fd;
-  color: var(--accent-strong);
+.dashboard-mark-button.is-active,
+.dashboard-mark-button.is-active:hover:not(:disabled) {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+  color: #166534;
 }
 
 .dashboard-mark-button:disabled {
@@ -1027,14 +1028,105 @@ img.app-logo {
   background: var(--accent-soft);
 }
 
-.view-all-mark-button.is-active {
-  background: var(--accent-soft);
-  border-color: #c4b5fd;
-  color: var(--accent-strong);
+.view-all-mark-button.is-active,
+.view-all-mark-button.is-active:hover:not(:disabled) {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+  color: #166534;
 }
 
 .view-all-mark-button:disabled {
   opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* -------------------------- Mark emailed dialog -------------------------- */
+
+.confirm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(15, 23, 42, 0.45);
+}
+
+.confirm-dialog {
+  width: min(100%, 430px);
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 1.15rem 1.25rem;
+  box-shadow: 0 25px 60px -20px rgba(15, 23, 42, 0.45);
+}
+
+.confirm-dialog h3 {
+  margin: 0 0 0.5rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.confirm-dialog p {
+  margin: 0 0 1rem;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.confirm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.confirm-button {
+  appearance: none;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.4rem 0.9rem;
+  background: #fff;
+  color: #475569;
+  font-size: 0.78rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.confirm-button:hover:not(:disabled) {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.confirm-button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.confirm-button.primary:hover:not(:disabled) {
+  background: var(--accent-strong);
+  border-color: var(--accent-strong);
+  color: #fff;
+}
+
+.confirm-button.ghost {
+  border-color: transparent;
+  background: transparent;
+  color: var(--muted);
+}
+
+.confirm-button.ghost:hover:not(:disabled) {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.confirm-button:disabled {
+  opacity: 0.55;
   cursor: not-allowed;
 }
 
@@ -1083,12 +1175,8 @@ img.app-logo {
   background: #f8fafc;
 }
 
-.dashboard-table tbody tr.is-checkpoint td {
-  background: var(--accent-soft);
-}
-
-.dashboard-table tbody tr.is-checkpoint td:first-child {
-  box-shadow: inset 3px 0 0 var(--accent);
+.dashboard-table tbody tr.is-emailed td {
+  background: #f8fafc;
 }
 
 .dashboard-table tbody tr:last-child td {
@@ -1563,12 +1651,8 @@ dialog:not([open]) {
   background: #f8fafc;
 }
 
-.view-all-table tbody tr.is-checkpoint td {
-  background: var(--accent-soft);
-}
-
-.view-all-table tbody tr.is-checkpoint td:first-child {
-  box-shadow: inset 3px 0 0 var(--accent);
+.view-all-table tbody tr.is-emailed td {
+  background: #f8fafc;
 }
 
 .view-all-table tbody tr:last-child td {
